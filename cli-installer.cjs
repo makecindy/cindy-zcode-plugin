@@ -40,7 +40,8 @@ async function installedPackageVersion(entry) {
         path.resolve(dir, '../..', 'Info.plist')], { timeout: 4000 });
     }
     const productVersion = result?.stdout.trim() || '';
-    const version = win ? productVersion.replace(/^(\d+\.\d+\.\d+)\.0$/, '$1') : productVersion;
+    // Windows product versions carry a fourth build number, e.g. 3.18.2.1490 for release v3.18.2.
+    const version = win ? productVersion.replace(/^(\d+\.\d+\.\d+)\.\d+$/, '$1') : productVersion;
     return versionPattern.test(version) ? version : undefined;
   } catch { return undefined; }
 }

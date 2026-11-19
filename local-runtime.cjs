@@ -26,12 +26,13 @@ function searchPath(names) {
 function windowsInstallDirs() {
   // Get both standard uninstall hives and the per-user registration. Reading the
   // registered install path also handles a user picking a drive other than C:.
+  // The official installer registers its display name with the version, e.g. "ZCode 3.18.2".
   const root = process.env.SystemRoot || 'C:\\Windows';
   const ps = path.join(root, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
   const script = [
     "$roots = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'",
     '[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)',
-    "Get-ItemProperty -Path $roots -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq 'ZCode' } | ForEach-Object { if ($_.InstallLocation) { $_.InstallLocation } elseif ($_.DisplayIcon) { Split-Path (($_.DisplayIcon -replace ',[0-9]+$','').Trim('\"')) } }",
+    "Get-ItemProperty -Path $roots -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match '^ZCode( \\d+(\\.\\d+)*)?$' } | ForEach-Object { if ($_.InstallLocation) { $_.InstallLocation } elseif ($_.DisplayIcon) { Split-Path (($_.DisplayIcon -replace ',[0-9]+$','').Trim('\"')) } }",
   ].join('\n');
   try {
     return execFileSync(ps, ['-NoProfile', '-NonInteractive', '-Command', script], {
