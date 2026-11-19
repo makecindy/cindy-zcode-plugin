@@ -3,7 +3,7 @@
   "id": "zcode-acp",
   "name": "ZCode",
   "description": "Run Cindy tasks with the ZCode installation and models on this computer.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "releaseNotes": "对齐设置页的 CLI 版本标签、版本号、刷新图标和更新状态。",
   "minCindyVersion": "0.0.0",
   "githubRelease": "makecindy/cindy-zcode-plugin",
