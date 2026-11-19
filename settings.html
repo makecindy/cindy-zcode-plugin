@@ -17,6 +17,13 @@
   dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 10px 0 0; }
   dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
   [hidden] { display: none !important; }
+  .harness-usage { margin-top: 18px; border-top: 1px solid var(--border-default, GrayText); padding-top: 12px; }
+  .harness-usage h2 { margin: 0; font: inherit; font-weight: 600; }
+  .harness-usage dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 6px 12px; margin: 10px 0; }
+  .harness-usage dl[hidden] { display: none; }
+  .harness-usage dt, .harness-usage dd { margin: 0; overflow-wrap: anywhere; }
+  .harness-usage dd { text-align: end; font-variant-numeric: tabular-nums; }
+  .harness-usage small { display: block; margin-top: 6px; color: var(--text-secondary, GrayText); }
 </style>
 </head>
 <body>
@@ -28,6 +35,10 @@
   <dt id="path-label"></dt><dd id="path"></dd>
   <dt id="count-label"></dt><dd id="count"></dd>
 </dl>
+<section class="harness-usage" id="harness-usage" data-channel="cindy-zcode-status" data-recheck="check" aria-labelledby="harness-usage-title">
+  <h2 id="harness-usage-title"></h2><dl hidden></dl><small role="status"></small>
+</section>
+<script src="usage-view.js"></script>
 <script src="settings.js"></script>
 </body>
 </html>

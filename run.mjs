@@ -2,7 +2,7 @@
 // use the same executable, bundled bridge and provider environment.
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { builtinProviderEnv, buildInitialConfigOptions, describeEfforts, serve } from './vendor/dist/adapter.mjs';
+import { builtinProviderEnv, buildInitialConfigOptions, describeEfforts, readPlanUsage, serve } from './vendor/dist/adapter.mjs';
 
 const entry = process.env.ZCODE_BIN;
 Object.assign(process.env, builtinProviderEnv(entry));
@@ -40,6 +40,8 @@ async function detect() {
 try {
   if (process.argv[2] === '--detect') {
     process.stdout.write(JSON.stringify(await detect()) + '\n');
+  } else if (process.argv[2] === '--usage') {
+    process.stdout.write(JSON.stringify(await readPlanUsage()) + '\n');
   } else {
     await serve();
   }

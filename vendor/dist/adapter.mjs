@@ -56280,6 +56280,48 @@ if (invokedDirectly) {
   });
 }
 
+// usage.mjs
+init_credentials();
+init_account_provider();
+init_project_token();
+init_parse3();
+init_startplan();
+var regions = { bigmodel: "https://open.bigmodel.cn", zai: "https://api.z.ai" };
+async function codingPlan(family, origin, legacy, request) {
+  const id = accountProviderIdFor("builtin:" + family + "-coding-plan");
+  let key = codingPlanRequestAuthFor(id)?.apiKey;
+  if (!key && oauthProjectTokenFamilyFor(id) === family) key = (await resolveOAuthProjectToken(family)).token;
+  if (!key && legacy.providerBaseURL && new URL(legacy.providerBaseURL).origin === origin) key = legacy.ANTHROPIC_API_KEY;
+  if (!key) return [];
+  const response = await request(origin + "/api/monitor/usage/quota/limit", {
+    headers: { Authorization: "Bearer " + key },
+    redirect: "error",
+    signal: AbortSignal.timeout(8e3)
+  });
+  if (!response.ok) return [];
+  const result = parseQuotaEnvelope({ status: response.status, json: await response.json(), text: "" });
+  return result.kind === "success" ? result.items.map((item) => ({
+    label: (family === "zai" ? "Z.ai" : "BigModel") + " \xB7 " + item.label,
+    remainingPercent: item.leftPercent,
+    ...item.nextResetTime > 0 ? { resetsAt: item.nextResetTime } : {}
+  })) : [];
+}
+async function readPlanUsage(request = fetch) {
+  const legacy = loadZcodeCredentials();
+  const startPlan = queryStartPlan((url2, options) => {
+    if (new URL(url2).origin !== "https://zcode.z.ai") throw new Error("Unknown billing origin");
+    return request(url2, { ...options, redirect: "error" });
+  }).then((plan) => plan.kind === "success" ? plan.windows.map((row) => ({
+    label: row.label,
+    remainingPercent: Math.min(100, 100 * row.remainingUnits / row.totalUnits),
+    ...!row.oneTime && row.resetsAt > 0 ? { resetsAt: row.resetsAt } : {}
+  })) : []);
+  const queries = Object.entries(regions).map(([family, origin]) => codingPlan(family, origin, legacy, request));
+  const rows = await Promise.all([...queries, startPlan].map((query) => query.catch(() => [])));
+  const windows = rows.flat().filter((row) => typeof row.label === "string" && row.label.trim() && row.label.length <= 120 && !/[\u0000-\u001f\u007f]/.test(row.label) && Number.isFinite(row.remainingPercent) && row.remainingPercent >= 0 && row.remainingPercent <= 100).slice(0, 24);
+  return windows.length ? { updatedAt: Date.now(), windows } : null;
+}
+
 // adapter.mjs
 init_resolve();
 init_options();
@@ -56300,5 +56342,6 @@ export {
   buildInitialConfigOptions,
   builtinProviderEnv,
   describeEfforts,
+  readPlanUsage,
   main as serve
 };
