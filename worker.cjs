@@ -2,6 +2,7 @@
 
 const { execFile } = require('node:child_process');
 const readline = require('node:readline');
+const maintain = require('./cli-installer.cjs');
 const { promisify } = require('node:util');
 const { resolveRuntime, runner } = require('./local-runtime.cjs');
 
@@ -27,6 +28,12 @@ readline.createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line
   let request;
   try { request = JSON.parse(line.trim()); } catch { return reply(null, { error: { code: -32700, message: 'Parse error' } }); }
   if (request?.id == null) return;
+  if (request.method === 'cliMaintenance') {
+    const result = await maintain(request.params, () => {
+      process.stdout.write(JSON.stringify({ jsonrpc: '2.0', method: 'progress' }) + '\n');
+    });
+    return reply(request.id, { result });
+  }
   if (request.method === 'usage') {
     usageRead ??= probe(true).catch(() => null).finally(() => { usageRead = undefined; });
     return reply(request.id, { result: await usageRead });

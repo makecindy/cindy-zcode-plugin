@@ -1,11 +1,15 @@
 # ZCode for Cindy
 
+在 Cindy 打开 ZCode 插件设置，可检测本机 CLI、从 Z.ai 的 GitHub Releases 安装及检查更新。官方公开安装包自带 CLI。macOS 首次安装放在当前用户的 Applications 目录，Windows 由官方安装向导完成。
+
+从旧版升级时，请从新仓库下载 .cindy 文件并在 Cindy 导入一次，之后插件更新将使用 makecindy 下的新地址。
+
 在 Cindy 的模型选择器里选用这台电脑上的 ZCode。插件包内含 ACP 适配器，账号、订阅和自定义模型沿用 ZCode 的配置。
 
 ## 安装与更新
 
 1. 在运行任务的电脑上安装 [ZCode 桌面版](https://zcode.z.ai/)。打开 ZCode，登录账号或配置模型，确认能发消息。
-2. 从 [GitHub Releases](https://github.com/MagicLizi/cindy-zcode-plugin/releases/latest) 下载 `zcode-acp-<版本>.cindy`，在支持插件执行引擎的 Cindy 插件页导入。安装确认会列出本机 Node 工作进程和 ZCode 执行引擎两项权限。
+2. 从 [GitHub Releases](https://github.com/makecindy/cindy-zcode-plugin/releases/latest) 下载 `zcode-acp-<版本>.cindy`，在支持插件执行引擎的 Cindy 插件页导入。安装确认会列出本机 Node 工作进程和 ZCode 执行引擎两项权限。
 3. 在任务的模型选择器里选择 **ZCode → 模型**。更改 ZCode 的安装或账号后，可以在插件设置里点 **重新检测**。
 
 以后可在 Cindy 的插件设置页检查并安装来自本仓库的更新。Cindy 会校验 GitHub 提供的安装包摘要。

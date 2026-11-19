@@ -13,11 +13,13 @@
   };
   let language = /^zh\b/i.test(navigator.language || '') ? 'zh' : 'en';
   const channel = new BroadcastChannel('cindy-zcode-status');
+  const renderMaintenance = window.createCliMaintenance(channel, check);
   let current, retry, timeout;
   let view = { checking: true };
 
   function render() {
     const t = strings[language];
+    renderMaintenance(view.checking || view.failed ? null : view, language);
     document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
     $('check').textContent = t.check;
     $('check').disabled = !!current;
@@ -25,11 +27,6 @@
       view.published !== 'ok' ? (t[view.published] || t.error) : (view.available ? t.ready : t.setup);
     const message = $('message');
     message.textContent = view.message || '';
-    if (view.reason === 'not-installed') {
-      const url = document.createElement('code');
-      url.textContent = 'https://zcode.z.ai/';
-      message.append(' ', url);
-    }
     message.hidden = !message.textContent;
     for (const key of ['version', 'path', 'count']) {
       const absent = view[key] == null;

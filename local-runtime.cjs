@@ -110,4 +110,4 @@ function resolveRuntime() {
   return findNode(entry) || { reason: 'node-missing', path: entry };
 }
 
-module.exports = { resolveRuntime, runner };
+module.exports = { findZcode, resolveRuntime, runner };

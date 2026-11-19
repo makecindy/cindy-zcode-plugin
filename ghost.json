@@ -3,10 +3,10 @@
   "id": "zcode-acp",
   "name": "ZCode",
   "description": "Run Cindy tasks with the ZCode installation and models on this computer.",
-  "version": "0.1.1",
-  "releaseNotes": "在插件设置和支持插件用量的任务栏查看 Coding Plan 和 Start Plan 的可用额度。",
+  "version": "0.1.2",
+  "releaseNotes": "在插件设置中检测本机 CLI，并从官方渠道安装或检查和应用更新。",
   "minCindyVersion": "0.0.0",
-  "githubRelease": "MagicLizi/cindy-zcode-plugin",
+  "githubRelease": "makecindy/cindy-zcode-plugin",
   "icon": "icon.png",
   "locales": {
     "en": "locales/en.json",

@@ -6,6 +6,7 @@
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; padding: 16px; font: 14px/1.5 system-ui,sans-serif; color: var(--text-primary, CanvasText); }
+  #cli-maintenance { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
   header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
   h2 { font: inherit; font-weight: 600; margin: 0; }
   button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--border-default, GrayText); border-radius: 8px; padding: 5px 12px; cursor: pointer; }
@@ -35,10 +36,16 @@
   <dt id="path-label"></dt><dd id="path"></dd>
   <dt id="count-label"></dt><dd id="count"></dd>
 </dl>
+  <div id="cli-maintenance" class="actions" hidden>
+    <button type="button" id="cli-action"></button>
+    <span id="cli-status" role="status" aria-live="polite"></span>
+  </div>
+  <p id="cli-source"></p>
 <section class="harness-usage" id="harness-usage" data-channel="cindy-zcode-status" data-recheck="check" aria-labelledby="harness-usage-title">
   <h2 id="harness-usage-title"></h2><dl hidden></dl><small role="status"></small>
 </section>
 <script src="usage-view.js"></script>
+<script src="cli-settings.js"></script>
 <script src="settings.js"></script>
 </body>
 </html>

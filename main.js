@@ -98,7 +98,35 @@
   }
   const context = Promise.resolve().then(() => cindy.request({ kind: 'app-context' }))
     .then(response => useLocale(response?.context)).catch(() => {});
+  const cliRequests = new Set();
+  function handleCliMaintenance(data) {
+    if (data?.type !== 'cli-maintenance') return false;
+    if (typeof data.reqId !== 'string' || data.reqId.length > 64 ||
+        !['check', 'install', 'update'].includes(data.action)) return true;
+    const { reqId, action } = data;
+    channel.postMessage({ type: 'cli-ack', reqId });
+    if (cliRequests.has(reqId)) return true;
+    cliRequests.add(reqId);
+    if (cliRequests.size > 64) cliRequests.delete(cliRequests.values().next().value);
+    void (async () => {
+      let result;
+      try {
+        const response = await cindy.node.request({
+          method: 'cliMaintenance', params: { action, version: typeof data.version === 'string' ? data.version.slice(0, 64) : undefined },
+          timeoutMs: action === 'check' ? 50000 : 60000,
+          ...(action === 'check' ? {} : { maxTotalMs: 840000 }),
+        });
+        if (response?.ok) {
+          result = response.result;
+          if (result?.state === 'installed') void refresh();
+        }
+      } catch { /* Report a failed operation without exposing installer output. */ }
+      channel.postMessage({ type: 'cli-result', reqId, result: result || { error: 'operation' } });
+    })();
+    return true;
+  }
   channel.onmessage = async ({ data }) => {
+    if (handleCliMaintenance(data)) return;
     if (data?.type === 'harness-usage-request') {
       usageWanted = true;
       announceUsage(usageAvailable() && !usage && (!usageCheck || !!usagePending));
