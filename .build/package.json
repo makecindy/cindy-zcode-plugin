@@ -1,0 +1,9 @@
+{
+  "name": "cindy-zcode-plugin-build",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "esbuild": "0.28.2",
+    "zcode-acp-server": "0.89.0"
+  }
+}

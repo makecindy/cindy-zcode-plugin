@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 3,
+  "id": "zcode-acp",
+  "name": "ZCode",
+  "description": "Run Cindy tasks with the ZCode installation and models on this computer.",
+  "version": "0.1.0",
+  "minCindyVersion": "0.0.0",
+  "githubRelease": "MagicLizi/cindy-zcode-plugin",
+  "icon": "icon.png",
+  "locales": {
+    "en": "locales/en.json",
+    "zh-CN": "locales/zh-CN.json"
+  },
+  "entry": "main.js",
+  "launch": "resident",
+  "settingsHtml": "settings.html",
+  "node": {
+    "entry": "worker.cjs",
+    "protocol": "json-rpc-stdio",
+    "lifecycle": "on-demand",
+    "idleTimeoutSeconds": 30,
+    "entries": [
+      "zcode-acp.cjs"
+    ]
+  },
+  "harnesses": [
+    {
+      "id": "zcode",
+      "name": "ZCode",
+      "description": "Run tasks with your locally configured ZCode agent.",
+      "protocol": "acp",
+      "entry": "zcode-acp.cjs",
+      "locales": {
+        "zh-CN": {
+          "name": "ZCode",
+          "description": "用这台电脑上的 ZCode 和已配置的模型运行任务。"
+        }
+      }
+    }
+  ]
+}
