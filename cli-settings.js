@@ -31,6 +31,8 @@ window.createCliMaintenance = function (channel, refresh) {
   let locale = 'en';
   let result;
   let pending;
+  let synchronized = false;
+  let settledRequest;
   let retry;
   let timer;
 
@@ -42,39 +44,47 @@ window.createCliMaintenance = function (channel, refresh) {
       result?.error || result?.state;
     root.hidden = !local && !pending;
     action.dataset.action = next;
-    action.textContent = text[next].replace('{version}', result?.version || '');
-    action.disabled = !!pending || !channel;
-    status.textContent = (text[key] || '').replace('{version}', result?.version || '');
+    action.textContent = (pending ? text[key] : text[next]).replace('{version}', result?.version || '');
+    action.disabled = !!pending || !channel || !synchronized;
+    status.textContent = pending ? '' : (text[key] || '').replace('{version}', result?.version || '');
     const source = document.getElementById('cli-source');
     if (source) source.textContent = text['zcode-source'];
   }
 
-  function finish(value) {
-    const shouldRefresh = value.state === 'installed' || (pending?.action !== 'check' && value.state === 'current');
-    clearInterval(retry);
-    clearTimeout(timer);
-    pending = undefined;
-    result = value;
-    render();
-    if (shouldRefresh) refresh();
+  function sendUntilState(message) {
+    const send = () => channel.postMessage(message);
+    void fetch('/wake').catch(() => {});
+    send();
+    retry = setInterval(send, 650);
+    timer = setTimeout(() => {
+      clearInterval(retry);
+      pending = undefined;
+      synchronized = true;
+      result = { error: 'timeout' };
+      render();
+    }, 10000);
   }
 
   channel?.addEventListener('message', ({ data }) => {
-    if (!pending || data?.reqId !== pending.reqId) return;
-    if (data.type === 'cli-ack') clearInterval(retry);
-    if (data.type === 'cli-result') finish(data.result || { error: 'operation' });
+    if (data?.type !== 'cli-state') return;
+    clearInterval(retry);
+    clearTimeout(timer);
+    synchronized = true;
+    pending = data.active ? data : undefined;
+    if (data.reqId !== settledRequest && !data.active) {
+      settledRequest = data.reqId;
+      result = data.result;
+      render();
+      if (result?.state === 'installed' || (data.action !== 'check' && result?.state === 'current')) refresh();
+    } else render();
   });
   action.addEventListener('click', () => {
-    if (pending || !channel) return;
-    const operation = action.dataset.action;
-    pending = { type: 'cli-maintenance', reqId: crypto.randomUUID(), action: operation, version: result?.version };
-    const send = () => channel.postMessage(pending);
-    void fetch('/wake').catch(() => {});
+    if (pending || !channel || !synchronized) return;
+    pending = { type: 'cli-maintenance', reqId: crypto.randomUUID(), action: action.dataset.action, version: result?.version };
     render();
-    send();
-    retry = setInterval(send, 650);
-    timer = setTimeout(() => finish({ error: 'timeout' }), operation === 'check' ? 55000 : 855000);
+    sendUntilState(pending);
   });
+  if (channel) sendUntilState({ type: 'cli-state-request' });
 
   return function renderMaintenance(status, language) {
     if (status && local && (status.version !== local.version || status.reason !== local.reason) && result?.state !== 'installed') {
