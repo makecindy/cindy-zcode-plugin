@@ -1,8 +1,8 @@
 // This file runs with real Node. Both the task and the short settings probe
 // use the same executable, bundled bridge and provider environment.
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { builtinProviderEnv, buildInitialConfigOptions, describeEfforts, readPlanUsage, serve } from './vendor/dist/adapter.mjs';
+import { builtinProviderEnv, buildInitialConfigOptions, describeEfforts, readAccount, readCodingPlans, serve } from './vendor/dist/adapter.mjs';
 
 const entry = process.env.ZCODE_BIN;
 Object.assign(process.env, builtinProviderEnv(entry));
@@ -31,17 +31,47 @@ async function detect() {
     models.push({ id, name: name.slice(0, 200), ...describeEfforts(id) });
     if (models.length === 200) break;
   }
-  if (!models.length) return { available: false, reason: 'no-models', version, path: entry };
+  if (!models.length) {
+    // Only local files are read here. Whether the account has a plan is
+    // checked with the account status, which asks the quota service.
+    const reason = readAccount().signedIn ? 'no-models' : 'sign-in-required';
+    return { available: false, reason, version, path: entry };
+  }
   const mode = options.find(item => item.category === 'mode');
   const modes = (mode?.options ?? []).map(o => o.value).filter(id => ['default', 'acceptEdits', 'plan'].includes(id));
   return { available: true, version, path: entry, models, modes, defaultMode: mode?.currentValue };
 }
 
+// `zcode login` and `zcode logout` read the same provider table as the bridge,
+// so they run with this environment. The worker ends stdin to cancel; stdin
+// also ends when the worker exits, which stops a sign-in still waiting.
+async function cli(args) {
+  if (!['login', 'logout'].includes(args[0])) return 2;
+  const isScript = /\.(?:mjs|cjs|js)$/i.test(entry);
+  const child = spawn(isScript ? process.execPath : entry, isScript ? [entry, ...args] : args, {
+    stdio: ['ignore', 'inherit', 'inherit'], windowsHide: true,
+  });
+  const stop = () => child.kill();
+  process.stdin.once('end', stop);
+  process.stdin.once('close', stop);
+  process.stdin.resume();
+  return new Promise(resolve => {
+    child.once('error', () => resolve(1));
+    child.once('close', code => resolve(code ?? 1));
+  });
+}
+
 try {
-  if (process.argv[2] === '--detect') {
+  if (process.argv[2] === '--cli') {
+    process.exit(await cli(process.argv.slice(3)));
+  } else if (process.argv[2] === '--detect') {
     process.stdout.write(JSON.stringify(await detect()) + '\n');
-  } else if (process.argv[2] === '--usage') {
-    process.stdout.write(JSON.stringify(await readPlanUsage()) + '\n');
+  } else if (process.argv[2] === '--account') {
+    // Account status and usage share one quota read per family.
+    const account = readAccount();
+    const { plans, usage } = await readCodingPlans();
+    const plan = account.signedIn ? plans[account.family] : undefined;
+    process.stdout.write(JSON.stringify({ account: { ...account, ...(plan ? { plan } : {}) }, usage }) + '\n');
   } else {
     await serve();
   }

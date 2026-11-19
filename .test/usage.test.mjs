@@ -6,46 +6,66 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-test('packaged ZCode reader checks only its billing origin and preserves exhausted windows', async t => {
+// Run the packaged reader in a child with an isolated ZCode home, as the
+// plugin worker does. Each fixture answer is chosen by the request URL.
+async function fixture(t) {
   const home = await fs.mkdtemp(path.join(os.tmpdir(), 'zcode-usage-'));
   t.after(() => fs.rm(home, { recursive: true, force: true }));
-  const zcode = path.join(home, '.zcode');
-  const cfg = path.join(zcode, 'v2');
+  const cfg = path.join(home, '.zcode', 'v2');
   await fs.mkdir(cfg, { recursive: true });
   const probe = path.join(home, 'probe.mjs');
   const adapter = new URL('../vendor/dist/adapter.mjs', import.meta.url).href;
-  await fs.writeFile(probe, `import { readPlanUsage } from ${JSON.stringify(adapter)};
+  await fs.writeFile(probe, `import { readCodingPlans } from ${JSON.stringify(adapter)};
+    const answer = JSON.parse(process.env.FIXTURE_ANSWER);
     const calls = [];
-    const usage = await readPlanUsage(async (url, options) => {
+    const result = await readCodingPlans(async (url, options) => {
       calls.push([url, options.redirect, options.headers.Authorization === 'Bearer fixture']);
-      if (url.startsWith('https://zcode.z.ai/')) return Response.json({ code: 0, data: {
-        plans: [{ status: 'active', plan_id: 'zcode-test', name: 'ZCode Test' }],
-        balances: [{ plan_id: 'zcode-test', total_units: 10, remaining_units: 0,
-          show_name: 'Grant', expires_at: 1893456000 }],
-      } });
-      return Response.json({ success: true, data: { limits: [
-        { type: 'TOKENS_LIMIT', number: 5, percentage: 100, nextResetTime: 1893456000000 }
-      ] } });
+      return Response.json(answer);
     });
-    console.log(JSON.stringify({ calls, usage }));
+    console.log(JSON.stringify({ calls, ...result }));
   `);
-  const env = { ...process.env, ZCODE_HOME: zcode, HOME: home, USERPROFILE: home,
-    APPDATA: home, LOCALAPPDATA: home, XDG_CONFIG_HOME: home, ZCODE_PROVIDER: 'local' };
-  const run = async baseURL => {
+  const env = { ...process.env, ZCODE_HOME: path.join(home, '.zcode'), HOME: home, USERPROFILE: home,
+    APPDATA: home, LOCALAPPDATA: home, XDG_CONFIG_HOME: home, ZCODE_PROVIDER: 'local',
+    // A missing install keeps the bridge from reading a real ZCode's table.
+    ZCODE_BIN: path.join(home, 'missing', 'zcode.cjs') };
+  delete env.ZCODE_BUILTIN_PROVIDER_CONFIG_FILE;
+  return async (baseURL, answer) => {
     await fs.writeFile(path.join(cfg, 'config.json'), JSON.stringify({ provider: {
       local: { enabled: true, models: { example: {} }, options: { apiKey: 'fixture', baseURL } },
     } }));
-    const { stdout } = await promisify(execFile)(process.execPath, [probe], { env, cwd: home, windowsHide: true });
+    // A Start Plan sign-in must not be queried: Cindy cannot run that plan.
+    await fs.writeFile(path.join(cfg, 'credentials.json'), JSON.stringify({ zcodejwttoken: 'fixture' }));
+    const { stdout } = await promisify(execFile)(process.execPath, [probe], {
+      env: { ...env, FIXTURE_ANSWER: JSON.stringify(answer) }, cwd: home, windowsHide: true,
+    });
     return JSON.parse(stdout);
   };
-  assert.deepEqual(await run('https://custom.invalid'), { calls: [], usage: null });
-  const plan = await run('https://api.z.ai/api/anthropic');
-  assert.deepEqual(plan.calls, [['https://api.z.ai/api/monitor/usage/quota/limit', 'error', true]]);
-  assert.deepEqual(plan.usage.windows, [{ label: 'Z.ai · 5h', remainingPercent: 0, resetsAt: 1893456000000 }]);
-  assert.ok(plan.usage.updatedAt > 0);
-  await fs.writeFile(path.join(cfg, 'credentials.json'), JSON.stringify({ zcodejwttoken: 'fixture' }));
-  await fs.writeFile(path.join(cfg, 'telemetry-state.json'), JSON.stringify({ deviceMid: 'test-device' }));
-  const grant = await run('https://custom.invalid');
-  assert.deepEqual(grant.calls, [['https://zcode.z.ai/api/v1/zcode-plan/billing/balance', 'error', true]]);
-  assert.deepEqual(grant.usage.windows, [{ label: 'ZCode Test · Grant', remainingPercent: 0 }]);
+}
+
+test('Coding Plan quota is read only from its own billing origin; Start Plan is not queried', async t => {
+  const run = await fixture(t);
+  const quota = { success: true, data: { limits: [
+    { type: 'TOKENS_LIMIT', number: 5, percentage: 100, nextResetTime: 1893456000000 },
+  ] } };
+  const custom = await run('https://custom.invalid', quota);
+  assert.deepEqual(custom.calls, []);
+  assert.deepEqual(custom.plans, { bigmodel: 'absent', zai: 'absent' });
+  assert.equal(custom.usage, null);
+
+  const active = await run('https://api.z.ai/api/anthropic', quota);
+  assert.deepEqual(active.calls, [['https://api.z.ai/api/monitor/usage/quota/limit', 'error', true]]);
+  assert.deepEqual(active.plans, { bigmodel: 'absent', zai: 'active' });
+  assert.deepEqual(active.usage.windows, [{ label: 'Z.ai · 5h', remainingPercent: 0, resetsAt: 1893456000000 }]);
+  assert.ok(active.usage.updatedAt > 0);
+});
+
+test('an account without a Coding Plan is reported as having none', async t => {
+  const run = await fixture(t);
+  // The quota service's answer for an account without the plan (api.z.ai, 2026-11-20).
+  const none = await run('https://open.bigmodel.cn/api/anthropic', { code: 500, msg: '当前用户不存在coding plan', success: false });
+  assert.deepEqual(none.calls, [['https://open.bigmodel.cn/api/monitor/usage/quota/limit', 'error', true]]);
+  assert.deepEqual(none.plans, { bigmodel: 'none', zai: 'absent' });
+  assert.equal(none.usage, null);
+  const unknown = await run('https://open.bigmodel.cn/api/anthropic', { code: 500, msg: 'busy', success: false });
+  assert.deepEqual(unknown.plans, { bigmodel: 'unknown', zai: 'absent' });
 });

@@ -85,7 +85,8 @@ test('ZCode desktop, Cindy plugin stdio and an isolated model', { skip: !process
     await fs.rm(tmp, { recursive: true, force: true, maxRetries: 5, retryDelay: 250 });
   });
   const fresh = await worker.call('detect', {});
-  assert.equal(fresh.reason, 'no-models', JSON.stringify(fresh));
+  // A fresh install has neither a sign-in nor a model; the settings page offers sign-in.
+  assert.equal(fresh.reason, 'sign-in-required', JSON.stringify(fresh));
 
   let requests = 0;
   let lastTools = [];

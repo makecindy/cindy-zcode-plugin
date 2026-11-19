@@ -26832,7 +26832,7 @@ function storeStartPlanJwt() {
   return readCredentialStoreSync()[ZCODE_JWT_CREDENTIAL_KEY2]?.trim() || null;
 }
 function manualCodingPlanKeys() {
-  const families = codingPlanFamiliesByBaseUrl();
+  const families2 = codingPlanFamiliesByBaseUrl();
   const out = /* @__PURE__ */ new Map();
   for (const rule of readPersonalProviderRules()) {
     if (rule.enabled === false)
@@ -26841,7 +26841,7 @@ function manualCodingPlanKeys() {
       continue;
     const apiKey = rule.config.access.apiKey?.trim();
     const baseUrl = rule.config.api?.baseUrl?.replace(/\/+$/, "");
-    const family = baseUrl ? families.get(baseUrl) : void 0;
+    const family = baseUrl ? families2.get(baseUrl) : void 0;
     if (!apiKey || !family)
       continue;
     out.set(`builtin:${family}-coding-plan`, apiKey);
@@ -26901,6 +26901,16 @@ function oauthSelectedCodingPlanFamilies(credsDir = path7.dirname(ZCODE_CREDS_PA
       out.add(family);
     }
   } catch {
+  }
+  const store = readCredentialStoreSync();
+  for (const rule of readBuiltinTable()?.table.config?.providerConfigRules?.providerRules ?? []) {
+    const access = rule.config?.access;
+    if (access?.type !== "zhipu-account" || access.mode !== "individual-coding-plan")
+      continue;
+    if (!isCodingPlanFamily(access.accountType) || !hasOAuthLogin(access.accountType))
+      continue;
+    if (store["account-provider:" + rule.providerId + ":auth-source"]?.trim() === "oauth" && store["account-provider:" + rule.providerId + ":identity"]?.trim())
+      out.add(access.accountType);
   }
   return out;
 }
@@ -28263,6 +28273,9 @@ function appendEntitledCodingPlanModels(out, personal, pinned) {
   }
 }
 function loadAllModels() {
+  return loadAllModelsWithStartPlan().filter((m) => !/^(?:account|builtin):[a-z0-9]+-start-plan$/.test(m.providerId));
+}
+function loadAllModelsWithStartPlan() {
   const personal = loadPersonalModels();
   const pinned = process.env.ZCODE_PROVIDER;
   try {
@@ -56285,41 +56298,74 @@ init_credentials();
 init_account_provider();
 init_project_token();
 init_parse3();
-init_startplan();
 var regions = { bigmodel: "https://open.bigmodel.cn", zai: "https://api.z.ai" };
+var noPlan = /不存在\s*coding\s*plan|no\s+coding\s+plan/i;
 async function codingPlan(family, origin, legacy, request) {
   const id = accountProviderIdFor("builtin:" + family + "-coding-plan");
   let key = codingPlanRequestAuthFor(id)?.apiKey;
   if (!key && oauthProjectTokenFamilyFor(id) === family) key = (await resolveOAuthProjectToken(family)).token;
   if (!key && legacy.providerBaseURL && new URL(legacy.providerBaseURL).origin === origin) key = legacy.ANTHROPIC_API_KEY;
-  if (!key) return [];
+  if (!key) return { state: "absent", windows: [] };
   const response = await request(origin + "/api/monitor/usage/quota/limit", {
     headers: { Authorization: "Bearer " + key },
     redirect: "error",
     signal: AbortSignal.timeout(8e3)
   });
-  if (!response.ok) return [];
-  const result = parseQuotaEnvelope({ status: response.status, json: await response.json(), text: "" });
-  return result.kind === "success" ? result.items.map((item) => ({
-    label: (family === "zai" ? "Z.ai" : "BigModel") + " \xB7 " + item.label,
-    remainingPercent: item.leftPercent,
-    ...item.nextResetTime > 0 ? { resetsAt: item.nextResetTime } : {}
-  })) : [];
+  if (!response.ok) return { state: "unknown", windows: [] };
+  const json2 = await response.json();
+  if (json2?.success === false && noPlan.test(String(json2.msg ?? ""))) return { state: "none", windows: [] };
+  const result = parseQuotaEnvelope({ status: response.status, json: json2, text: "" });
+  if (result.kind !== "success") return { state: "unknown", windows: [] };
+  return {
+    state: "active",
+    windows: result.items.map((item) => ({
+      label: (family === "zai" ? "Z.ai" : "BigModel") + " \xB7 " + item.label,
+      remainingPercent: item.leftPercent,
+      ...item.nextResetTime > 0 ? { resetsAt: item.nextResetTime } : {}
+    }))
+  };
+}
+function shown(row) {
+  return typeof row.label === "string" && row.label.trim() && row.label.length <= 120 && !/[\u0000-\u001f\u007f]/.test(row.label) && Number.isFinite(row.remainingPercent) && row.remainingPercent >= 0 && row.remainingPercent <= 100;
+}
+async function readCodingPlans(request = fetch) {
+  const legacy = loadZcodeCredentials();
+  const entries = await Promise.all(Object.entries(regions).map(async ([family, origin]) => {
+    const plan = await codingPlan(family, origin, legacy, request).catch(() => ({ state: "unknown", windows: [] }));
+    return [family, plan];
+  }));
+  const plans = Object.fromEntries(entries.map(([family, plan]) => [family, plan.state]));
+  const windows = entries.flatMap(([, plan]) => plan.windows).filter(shown).slice(0, 24);
+  return { plans, usage: windows.length ? { updatedAt: Date.now(), windows } : null };
 }
 async function readPlanUsage(request = fetch) {
-  const legacy = loadZcodeCredentials();
-  const startPlan = queryStartPlan((url2, options) => {
-    if (new URL(url2).origin !== "https://zcode.z.ai") throw new Error("Unknown billing origin");
-    return request(url2, { ...options, redirect: "error" });
-  }).then((plan) => plan.kind === "success" ? plan.windows.map((row) => ({
-    label: row.label,
-    remainingPercent: Math.min(100, 100 * row.remainingUnits / row.totalUnits),
-    ...!row.oneTime && row.resetsAt > 0 ? { resetsAt: row.resetsAt } : {}
-  })) : []);
-  const queries = Object.entries(regions).map(([family, origin]) => codingPlan(family, origin, legacy, request));
-  const rows = await Promise.all([...queries, startPlan].map((query) => query.catch(() => [])));
-  const windows = rows.flat().filter((row) => typeof row.label === "string" && row.label.trim() && row.label.length <= 120 && !/[\u0000-\u001f\u007f]/.test(row.label) && Number.isFinite(row.remainingPercent) && row.remainingPercent >= 0 && row.remainingPercent <= 100).slice(0, 24);
-  return windows.length ? { updatedAt: Date.now(), windows } : null;
+  return (await readCodingPlans(request)).usage;
+}
+
+// account.mjs
+init_credential_store();
+var families = ["bigmodel", "zai"];
+function printable(value) {
+  if (typeof value !== "string") return void 0;
+  const text = value.trim();
+  return text && text.length <= 80 && !/[\u0000-\u001f\u007f]/.test(text) ? text : void 0;
+}
+function displayName(raw) {
+  try {
+    const info = JSON.parse(raw);
+    return printable(info?.displayName) ?? printable(info?.username) ?? printable(info?.name) ?? printable(info?.rawProfile?.name);
+  } catch {
+    return void 0;
+  }
+}
+function readAccount() {
+  const store = readCredentialStoreSync();
+  const signedIn = (family2) => !!store[`oauth:${family2}:access_token`]?.trim();
+  const active2 = store["oauth:active_provider"]?.trim();
+  const family = families.includes(active2) && signedIn(active2) ? active2 : families.find(signedIn);
+  if (!family) return { signedIn: false };
+  const name = displayName(store[`oauth:${family}:user_info`]);
+  return { signedIn: true, family, ...name ? { name } : {} };
 }
 
 // adapter.mjs
@@ -56342,6 +56388,8 @@ export {
   buildInitialConfigOptions,
   builtinProviderEnv,
   describeEfforts,
+  readAccount,
+  readCodingPlans,
   readPlanUsage,
   main as serve
 };

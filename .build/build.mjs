@@ -52,6 +52,14 @@ const adaptations = {
             out.modelsByProvider.set(pid, [...new Set(ids)].filter(id => typeof id === "string" && !disabled.has(id)));
         }
         out.providers.push({ pid, rule });`);
+    // ZCode serves Start Plan only to its own desktop app: model requests from
+    // this bridge are refused with 3012 "This client is not supported". Every
+    // model menu, session default and model switch reads this one list.
+    source = replaceOnce(source, "export function loadAllModels() {",
+      `export function loadAllModels() {
+    return loadAllModelsWithStartPlan().filter(m => !/^(?:account|builtin):[a-z0-9]+-start-plan$/.test(m.providerId));
+}
+function loadAllModelsWithStartPlan() {`);
     // A fresh install has no usable model yet. Reuse the upstream entitlement
     // and local-provider checks without fabricating a default subscription.
     return replaceOnce(source,
@@ -64,6 +72,29 @@ const adaptations = {
       'setConfigOption(server, zcodeSid, params.configId, params.configId === "mode" ? nativeMode(params.value) : params.value, params.sessionId)'),
   "backend/credential-store.js": source => replaceOnce(source,
     'req("@napi-rs/keyring")', 'req("../native/keyring.cjs")'),
+  // The settings page signs in with `zcode login <family>`. Without the desktop
+  // app, the CLI records that OAuth connection on the family's individual
+  // coding plan provider in the shared credential store, not in setting.json.
+  "config/account-provider.js": source => replaceOnce(source,
+    "    catch {\n        // setting.json absent (headless-only) — nothing to infer\n    }\n    return out;\n}\n/**\n * Families entitled for Start Plan.",
+    `    catch {
+        // setting.json absent (headless-only) — nothing to infer
+    }
+    const store = readCredentialStoreSync();
+    for (const rule of readBuiltinTable()?.table.config?.providerConfigRules?.providerRules ?? []) {
+        const access = rule.config?.access;
+        if (access?.type !== "zhipu-account" || access.mode !== "individual-coding-plan")
+            continue;
+        if (!isCodingPlanFamily(access.accountType) || !hasOAuthLogin(access.accountType))
+            continue;
+        if (store["account-provider:" + rule.providerId + ":auth-source"]?.trim() === "oauth" &&
+            store["account-provider:" + rule.providerId + ":identity"]?.trim())
+            out.add(access.accountType);
+    }
+    return out;
+}
+/**
+ * Families entitled for Start Plan.`),
 };
 const applied = new Set();
 const upstream = path.join(modules, "zcode-acp-server");

@@ -1,5 +1,6 @@
 export { main as serve } from "zcode-acp-server/dist/index.js";
-export { readPlanUsage } from "./usage.mjs";
+export { readCodingPlans, readPlanUsage } from "./usage.mjs";
+export { readAccount } from "./account.mjs";
 export { builtinProviderEnv } from "zcode-acp-server/dist/backend/resolve.js";
 export { buildInitialConfigOptions } from "zcode-acp-server/dist/config/options.js";
 import { parseModelValue, personalModelSpec, findProviderConfig } from "zcode-acp-server/dist/config/options.js";

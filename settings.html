@@ -29,6 +29,19 @@
   button.cli-refresh { display: inline-grid; place-items: center; padding: 0; width: 32px; height: 32px; border: 0; border-radius: 999px; }
   #cli-maintenance { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   #cli-status { color: var(--text-secondary, GrayText); }
+  .account { margin: 16px 0 0; padding: 12px; border: 1px solid var(--border-default, GrayText); border-radius: 12px; }
+  .account-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+  .account-title { font-weight: 600; }
+  .account-status { color: var(--text-secondary, GrayText); text-align: end; overflow-wrap: anywhere; }
+  .account-status[data-tone="success"] { color: var(--status-success, #2f7d4f); }
+  .account-status[data-tone="warning"] { color: var(--warning-fg, #b54708); }
+  .account p { margin: 8px 0 0; }
+  .account-help { color: var(--text-secondary, GrayText); font-size: 13px; }
+  .account-note[data-tone="error"] { color: var(--error-fg, #b42318); }
+  .account a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  .account-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+  .account button { min-height: 32px; }
+  button.danger { color: var(--error-fg, #b42318); }
 </style>
 </head>
 <body>
@@ -49,6 +62,23 @@
   <dt id="path-label"></dt><dd id="path"></dd>
   <dt id="count-label"></dt><dd id="count"></dd>
 </dl>
+<section class="account" id="account" aria-labelledby="account-title" hidden>
+  <div class="account-head">
+    <span class="account-title" id="account-title"></span>
+    <span class="account-status" id="account-status" role="status" aria-live="polite"></span>
+  </div>
+  <p id="account-plan" hidden></p>
+  <p class="account-help" id="account-help" hidden></p>
+  <div class="account-actions" id="account-actions" hidden></div>
+  <div id="account-confirm" hidden>
+    <p id="account-confirm-text"></p>
+    <div class="account-actions">
+      <button type="button" class="danger" id="account-confirm-yes"></button>
+      <button type="button" id="account-confirm-no"></button>
+    </div>
+  </div>
+  <p class="account-note" id="account-note" role="status" aria-live="polite" hidden></p>
+</section>
   <p id="cli-source"></p>
 <section class="harness-usage" id="harness-usage" data-channel="cindy-zcode-status" data-recheck="check" aria-labelledby="harness-usage-title">
   <h2 id="harness-usage-title"></h2><dl hidden></dl><small role="status"></small>
@@ -56,5 +86,6 @@
 <script src="usage-view.js"></script>
 <script src="cli-settings.js"></script>
 <script src="settings.js"></script>
+<script src="account-view.js"></script>
 </body>
 </html>
