@@ -6,7 +6,6 @@
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; padding: 16px; font: 14px/1.5 system-ui,sans-serif; color: var(--text-primary, CanvasText); }
-  #cli-maintenance { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
   header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
   h2 { font: inherit; font-weight: 600; margin: 0; }
   button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--border-default, GrayText); border-radius: 8px; padding: 5px 12px; cursor: pointer; }
@@ -25,21 +24,30 @@
   .harness-usage dt, .harness-usage dd { margin: 0; overflow-wrap: anywhere; }
   .harness-usage dd { text-align: end; font-variant-numeric: tabular-nums; }
   .harness-usage small { display: block; margin-top: 6px; color: var(--text-secondary, GrayText); }
+  dd.cli-version { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  button.cli-refresh { display: inline-grid; place-items: center; padding: 0; width: 32px; height: 32px; border: 0; border-radius: 999px; }
+  #cli-maintenance { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  #cli-status { color: var(--text-secondary, GrayText); }
 </style>
 </head>
 <body>
-<header><h2>ZCode</h2><button type="button" id="check">Check again</button></header>
+<header><h2>ZCode</h2></header>
 <p id="state" role="status" aria-live="polite"></p>
 <p id="message" hidden></p>
-<dl id="details" hidden>
-  <dt id="version-label"></dt><dd id="version"></dd>
+<dl>
+  <dt id="version-label"></dt><dd class="cli-version">
+      <span id="version"></span>
+      <button type="button" id="check" class="cli-refresh" disabled aria-label="Check CLI version and updates">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3a7 7 0 0 0 11.6-1"/></svg>
+      </button>
+      <div id="cli-maintenance" hidden>
+        <button type="button" id="cli-action"></button>
+        <span id="cli-status" role="status" aria-live="polite"></span>
+      </div>
+    </dd>
   <dt id="path-label"></dt><dd id="path"></dd>
   <dt id="count-label"></dt><dd id="count"></dd>
 </dl>
-  <div id="cli-maintenance" class="actions" hidden>
-    <button type="button" id="cli-action"></button>
-    <span id="cli-status" role="status" aria-live="polite"></span>
-  </div>
   <p id="cli-source"></p>
 <section class="harness-usage" id="harness-usage" data-channel="cindy-zcode-status" data-recheck="check" aria-labelledby="harness-usage-title">
   <h2 id="harness-usage-title"></h2><dl hidden></dl><small role="status"></small>
