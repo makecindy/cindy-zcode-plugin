@@ -24525,9 +24525,9 @@ function loadUserConfig(env = process.env) {
   } else if (remote !== void 0) {
     warn(`config: "remote" in ${file2} is not an object \u2014 ignoring the section`);
   }
-  const quota = parsed["quota"];
-  if (quota !== void 0) {
-    if (!isPlainObject2(quota)) {
+  const quota2 = parsed["quota"];
+  if (quota2 !== void 0) {
+    if (!isPlainObject2(quota2)) {
       warn(`config: "quota" in ${file2} is not an object \u2014 ignoring the section`);
     } else {
       const q = {};
@@ -24538,12 +24538,12 @@ function loadUserConfig(env = process.env) {
         ["opencodeGoSessionToken", "opencodeGoSessionToken"],
         ["opencodeGoApiKey", "opencodeGoApiKey"]
       ]) {
-        const v = quota[jsonKey];
+        const v = quota2[jsonKey];
         if (typeof v === "string" && v.trim())
           q[prop] = v.trim();
       }
-      if (typeof quota["autoResume"] === "boolean")
-        q.autoResume = quota["autoResume"];
+      if (typeof quota2["autoResume"] === "boolean")
+        q.autoResume = quota2["autoResume"];
       if (Object.keys(q).length > 0)
         result.quota = q;
     }
@@ -27330,6 +27330,60 @@ var init_modes = __esm({
   }
 });
 
+// templates.mjs
+import { readFileSync as readFileSync7 } from "node:fs";
+function withProviderTemplate(rule, table = readBuiltinTable()?.table) {
+  const id = rule?.templateId;
+  const template = id ? table?.config?.providerConfigRules?.templateRules?.find((item) => item.templateId === id) : void 0;
+  if (!template?.config) return rule;
+  const off = new Set((table.config.modelConfigRules?.templateModelRules ?? []).filter((item) => item.templateId === id && item.config?.enabled === false).map((item) => item.modelId));
+  const own2 = rule.config ?? {};
+  return {
+    ...rule,
+    config: {
+      ...template.config,
+      ...own2,
+      access: { ...template.config.access, ...own2.access },
+      api: { ...template.config.api, ...own2.api },
+      personalModelIds: [
+        ...(template.config.builtinModelIds ?? []).filter((model) => !off.has(model)),
+        ...Array.isArray(own2.personalModelIds) ? own2.personalModelIds : []
+      ]
+    }
+  };
+}
+function codingPlanApiKeys() {
+  let rules = [];
+  try {
+    rules = JSON.parse(readFileSync7(zcodePersonalProviderPath(), "utf8")).config?.providerConfigRules?.providerRules ?? [];
+  } catch {
+  }
+  const table = readBuiltinTable()?.table;
+  const out = { bigmodel: [], zai: [] };
+  for (const raw of rules) {
+    if (!raw || raw.enabled === false) continue;
+    const rule = withProviderTemplate(raw, table);
+    if (rule.config?.access?.type !== "zhipu-coding-plan-api-key") continue;
+    const key = typeof rule.config.access.apiKey === "string" ? rule.config.access.apiKey.trim() : "";
+    let family;
+    try {
+      family = origins[new URL(rule.config.api?.baseUrl).origin];
+    } catch {
+    }
+    if (!key || !family || out[family].some((entry) => entry.key === key)) continue;
+    out[family].push({ key, name: typeof rule.providerName === "string" ? rule.providerName : "" });
+  }
+  return out;
+}
+var origins;
+var init_templates = __esm({
+  "templates.mjs"() {
+    init_account_provider();
+    init_utils();
+    origins = { "https://open.bigmodel.cn": "bigmodel", "https://api.z.ai": "zai" };
+  }
+});
+
 // node_modules/zcode-acp-server/dist/backend/adapter.js
 function backendCapabilities(kind) {
   return kind === "dsh" ? DSH_CAPABILITIES : ZCODE_CAPABILITIES;
@@ -27381,7 +27435,7 @@ var init_adapter = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/lazy-sessions.js
-import { existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync as readFileSync7, readdirSync as readdirSync2, renameSync, statSync as statSync3, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync as readFileSync8, readdirSync as readdirSync2, renameSync, statSync as statSync3, unlinkSync, writeFileSync } from "node:fs";
 import path9 from "node:path";
 import process5 from "node:process";
 function storePath() {
@@ -27392,7 +27446,7 @@ function readTable() {
     const p = storePath();
     if (!existsSync4(p))
       return { kept: {}, pruned: false };
-    const raw = JSON.parse(readFileSync7(p, "utf8"));
+    const raw = JSON.parse(readFileSync8(p, "utf8"));
     if (typeof raw !== "object" || raw === null)
       return { kept: {}, pruned: false };
     const now4 = Date.now();
@@ -28105,13 +28159,13 @@ __export(options_exports, {
   rememberModelChoice: () => rememberModelChoice,
   setConfigOption: () => setConfigOption
 });
-import { readFileSync as readFileSync8 } from "node:fs";
+import { readFileSync as readFileSync9 } from "node:fs";
 function readConfig() {
   return readCredentialConfig(ZCODE_CREDS_PATH);
 }
 function readPersonalProviderConfig() {
   try {
-    return JSON.parse(readFileSync8(zcodePersonalProviderPath(), "utf8"));
+    return JSON.parse(readFileSync9(zcodePersonalProviderPath(), "utf8"));
   } catch {
     return null;
   }
@@ -28153,13 +28207,14 @@ function loadPersonalModels() {
     if (!rule.providerId)
       continue;
     const pid = configProviderIdFor(rule.providerId);
-    const personalIds = rule.config?.personalModelIds;
+    const entry = withProviderTemplate(rule);
+    const personalIds = entry.config?.personalModelIds;
     if (Array.isArray(personalIds)) {
       const disabled = new Set(modelRules.filter((m) => m.providerId === rule.providerId && m.config?.enabled === false).map((m) => m.modelId));
       const ids = (out.modelsByProvider.get(pid) ?? []).concat(personalIds);
       out.modelsByProvider.set(pid, [...new Set(ids)].filter((id) => typeof id === "string" && !disabled.has(id)));
     }
-    out.providers.push({ pid, rule });
+    out.providers.push({ pid, rule: entry });
   }
   return out;
 }
@@ -28786,6 +28841,7 @@ var DEFAULT_PROVIDER_ID, DEFAULT_PROVIDER_NAME, DEFAULT_MODEL_ID, THOUGHT_ORDER;
 var init_options = __esm({
   "node_modules/zcode-acp-server/dist/config/options.js"() {
     init_modes();
+    init_templates();
     init_adapter();
     init_lazy_sessions();
     init_utils();
@@ -30171,12 +30227,12 @@ var init_cache3 = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/quota/opencode-go/config.js
-import { readFileSync as readFileSync9 } from "node:fs";
+import { readFileSync as readFileSync10 } from "node:fs";
 import path12 from "node:path";
 import process8 from "node:process";
 function readConfigFile(filePath = CONFIG_PATH) {
   try {
-    const raw = readFileSync9(filePath, "utf8");
+    const raw = readFileSync10(filePath, "utf8");
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       log(`opencode-go: config file is not a JSON object (${filePath})`);
@@ -30448,7 +30504,7 @@ var init_opencode_go = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/quota/startplan.js
-import { readFileSync as readFileSync10 } from "node:fs";
+import { readFileSync as readFileSync11 } from "node:fs";
 import path13 from "node:path";
 function apiOrigin2(env) {
   return env.ZCODE_ENDPOINT_ORIGIN ?? env.ZCODE_BASE_URL ?? "https://zcode.z.ai";
@@ -30458,7 +30514,7 @@ function readZcodeAccountAuth() {
   let deviceMid;
   try {
     const stateFile = path13.join(zcodeHomeDir2(), "v2", "telemetry-state.json");
-    const parsed = JSON.parse(readFileSync10(stateFile, "utf8"));
+    const parsed = JSON.parse(readFileSync11(stateFile, "utf8"));
     if (typeof parsed.deviceMid === "string") {
       const candidate = parsed.deviceMid.trim();
       deviceMid = candidate && DEVICE_MID_PATTERN2.test(candidate) ? candidate : void 0;
@@ -30602,7 +30658,7 @@ var init_startplan = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/i18n.js
-import { readFileSync as readFileSync11 } from "node:fs";
+import { readFileSync as readFileSync12 } from "node:fs";
 import path14 from "node:path";
 function resolveLanguage(env = process.env) {
   const pick2 = (value) => {
@@ -30622,7 +30678,7 @@ function appLocale() {
     appLocaleRead = true;
     let locale;
     try {
-      const raw = readFileSync11(path14.join(zcodeHomeDir2(), "v2", "setting.json"), "utf8");
+      const raw = readFileSync12(path14.join(zcodeHomeDir2(), "v2", "setting.json"), "utf8");
       const bomless = raw.charCodeAt(0) === 65279 ? raw.slice(1) : raw;
       const parsed = JSON.parse(bomless);
       const pref = typeof parsed.localePreference === "string" ? parsed.localePreference : void 0;
@@ -31259,7 +31315,7 @@ var init_listener = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/backend/sandbox.js
-import { existsSync as existsSync5, mkdirSync as mkdirSync4, mkdtempSync, readFileSync as readFileSync12, readdirSync as readdirSync3, realpathSync, renameSync as renameSync3, rmSync, statSync as statSync4, writeFileSync as writeFileSync3 } from "node:fs";
+import { existsSync as existsSync5, mkdirSync as mkdirSync4, mkdtempSync, readFileSync as readFileSync13, readdirSync as readdirSync3, realpathSync, renameSync as renameSync3, rmSync, statSync as statSync4, writeFileSync as writeFileSync3 } from "node:fs";
 import os3 from "node:os";
 import path15 from "node:path";
 import process9 from "node:process";
@@ -31291,7 +31347,7 @@ function readGlobalSandboxConfig() {
   const file2 = globalSandboxConfigPath();
   let text;
   try {
-    text = readFileSync12(file2, "utf8");
+    text = readFileSync13(file2, "utf8");
   } catch {
     return { allow: [], deny: [], strictGit: false };
   }
@@ -31324,7 +31380,7 @@ function persistGlobalSandboxConfig(mutate) {
   let cfg;
   let raw;
   try {
-    raw = readFileSync12(file2, "utf8");
+    raw = readFileSync13(file2, "utf8");
   } catch {
     raw = "";
   }
@@ -31376,7 +31432,7 @@ function sandboxConfigPath(workspaceRoot) {
 function readLegacySandboxConfig(workspaceRoot) {
   let parsed;
   try {
-    parsed = JSON.parse(readFileSync12(sandboxConfigPath(workspaceRoot), "utf8"));
+    parsed = JSON.parse(readFileSync13(sandboxConfigPath(workspaceRoot), "utf8"));
   } catch {
     return null;
   }
@@ -32516,7 +32572,7 @@ __export(deferred_probe_capability_exports, {
   resetDeferredProbeMemosForTests: () => resetDeferredProbeMemosForTests
 });
 import { createHash as createHash5 } from "node:crypto";
-import { closeSync as closeSync3, existsSync as existsSync6, openSync as openSync3, readFileSync as readFileSync13, readSync as readSync2, realpathSync as realpathSync2 } from "node:fs";
+import { closeSync as closeSync3, existsSync as existsSync6, openSync as openSync3, readFileSync as readFileSync14, readSync as readSync2, realpathSync as realpathSync2 } from "node:fs";
 import os4 from "node:os";
 import path16 from "node:path";
 function desktopBundleEntryPath() {
@@ -32570,18 +32626,18 @@ function readDesktopBundleVersion(entry) {
     const resourcesDir = path16.dirname(path16.dirname(entry));
     const unpackedPkg = path16.join(resourcesDir, "app", "package.json");
     if (existsSync6(unpackedPkg)) {
-      const pkg = JSON.parse(readFileSync13(unpackedPkg, "utf8"));
+      const pkg = JSON.parse(readFileSync14(unpackedPkg, "utf8"));
       return typeof pkg.version === "string" ? pkg.version : void 0;
     }
     return readAsarPackageVersion2(path16.join(resourcesDir, "app.asar"));
   }
-  const plist = readFileSync13(path16.join(path16.dirname(entry), "../../Info.plist"), "utf8");
+  const plist = readFileSync14(path16.join(path16.dirname(entry), "../../Info.plist"), "utf8");
   return /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/u.exec(plist)?.[1];
 }
 function bundleState(entry = desktopBundleEntryPath()) {
   if (!bundleStateMemo || bundleStateMemo.entry !== entry) {
     const version2 = readDesktopBundleVersion(entry);
-    const digest = createHash5("sha256").update(readFileSync13(entry)).digest("hex");
+    const digest = createHash5("sha256").update(readFileSync14(entry)).digest("hex");
     bundleStateMemo = { entry, version: version2, digest };
   }
   return bundleStateMemo;
@@ -33224,7 +33280,7 @@ var init_backend = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/closed-sessions.js
-import { existsSync as existsSync7, mkdirSync as mkdirSync5, readFileSync as readFileSync14, renameSync as renameSync4, writeFileSync as writeFileSync4 } from "node:fs";
+import { existsSync as existsSync7, mkdirSync as mkdirSync5, readFileSync as readFileSync15, renameSync as renameSync4, writeFileSync as writeFileSync4 } from "node:fs";
 import path17 from "node:path";
 import process11 from "node:process";
 function storePath2() {
@@ -33235,7 +33291,7 @@ function readTable2() {
     const p = storePath2();
     if (!existsSync7(p))
       return {};
-    const raw = JSON.parse(readFileSync14(p, "utf8"));
+    const raw = JSON.parse(readFileSync15(p, "utf8"));
     if (typeof raw !== "object" || raw === null)
       return {};
     const out = {};
@@ -39725,7 +39781,7 @@ __export(state_exports, {
   verifyPath: () => verifyPath,
   writeGoalState: () => writeGoalState
 });
-import { mkdirSync as mkdirSync6, readFileSync as readFileSync15, renameSync as renameSync5, unlinkSync as unlinkSync2, writeFileSync as writeFileSync5 } from "node:fs";
+import { mkdirSync as mkdirSync6, readFileSync as readFileSync16, renameSync as renameSync5, unlinkSync as unlinkSync2, writeFileSync as writeFileSync5 } from "node:fs";
 import path21 from "node:path";
 function goalDir(projectRoot, zcodeSid) {
   return path21.join(projectRoot, ".zcode", "scratch", "goals", zcodeSid);
@@ -39741,7 +39797,7 @@ function verifyPath(projectRoot, zcodeSid) {
 }
 function readGoalState(projectRoot, zcodeSid) {
   try {
-    const raw = JSON.parse(readFileSync15(statePath2(projectRoot, zcodeSid), "utf8"));
+    const raw = JSON.parse(readFileSync16(statePath2(projectRoot, zcodeSid), "utf8"));
     if (typeof raw !== "object" || raw === null || typeof raw.objective !== "string" || !Array.isArray(raw.tickets)) {
       return null;
     }
@@ -39916,7 +39972,7 @@ function handoffPrompt(opts) {
     `Reply with only: DONE`
   ].join("\n");
 }
-var init_templates = __esm({
+var init_templates2 = __esm({
   "node_modules/zcode-acp-server/dist/goal-loop/templates.js"() {
   }
 });
@@ -39928,7 +39984,7 @@ __export(driver_exports, {
   goalCompactThreshold: () => goalCompactThreshold,
   goalMaxTurns: () => goalMaxTurns2
 });
-import { readFileSync as readFileSync16, unlinkSync as unlinkSync3 } from "node:fs";
+import { readFileSync as readFileSync17, unlinkSync as unlinkSync3 } from "node:fs";
 function goalMaxTurns2() {
   return goalMaxTurns();
 }
@@ -39960,7 +40016,7 @@ var init_driver = __esm({
     init_auto_compact();
     init_settings();
     init_state();
-    init_templates();
+    init_templates2();
     STALL_ROUND_LIMIT = 3;
     KEEPALIVE_INTERVAL_MS = 6e4;
     EDITOR_TURN_WAIT_MS = 1e4;
@@ -40315,9 +40371,9 @@ var init_driver = __esm({
               await this.announce(messages().goalBackendRecovered);
               continue;
             }
-            const quota = classifyQuotaExhaustion(e);
-            if (quota && quotaAutoResumeEnabled() && this.runId === myRun && this.quotaRecoveries < _GoalLoopDriver.MAX_QUOTA_RECOVERIES) {
-              const outcome = await this.waitOutQuota(myRun, quota);
+            const quota2 = classifyQuotaExhaustion(e);
+            if (quota2 && quotaAutoResumeEnabled() && this.runId === myRun && this.quotaRecoveries < _GoalLoopDriver.MAX_QUOTA_RECOVERIES) {
+              const outcome = await this.waitOutQuota(myRun, quota2);
               if (outcome !== "continue")
                 return;
               this.quotaRecoveries++;
@@ -40357,8 +40413,8 @@ var init_driver = __esm({
         }
         let resumeAt = info.resetAt;
         if (resumeAt === void 0) {
-          const quota = await queryQuota().catch(() => ({ kind: "unavailable" }));
-          resumeAt = quotaResetAtFromResult(quota);
+          const quota2 = await queryQuota().catch(() => ({ kind: "unavailable" }));
+          resumeAt = quotaResetAtFromResult(quota2);
         }
         const waitMs = resumeAt !== void 0 ? Math.max(0, resumeAt - Date.now()) + quotaResetMarginMs() : quotaBackoffMs(this.quotaRecoveries + 1, QUOTA_WAIT_BASE_MS);
         const until = resumeAt !== void 0 ? new Date(resumeAt).toISOString() : void 0;
@@ -40456,7 +40512,7 @@ var init_driver = __esm({
             const vPath = verifyPath(this.server.projectCwd(), this.zcodeSid);
             const readVerify = () => {
               try {
-                return parseVerifyFile(readFileSync16(vPath, "utf8"));
+                return parseVerifyFile(readFileSync17(vPath, "utf8"));
               } catch {
                 return null;
               }
@@ -40561,7 +40617,7 @@ var init_driver = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/config/mcp-discovery.js
-import { existsSync as existsSync9, readFileSync as readFileSync17, readdirSync as readdirSync4, statSync as statSync6 } from "node:fs";
+import { existsSync as existsSync9, readFileSync as readFileSync18, readdirSync as readdirSync4, statSync as statSync6 } from "node:fs";
 import path22 from "node:path";
 function loadMcpServers() {
   const results = [];
@@ -40569,7 +40625,7 @@ function loadMcpServers() {
   try {
     const cliConfigPath = zcodeCliConfigPath();
     if (existsSync9(cliConfigPath)) {
-      config2 = JSON.parse(readFileSync17(cliConfigPath, "utf8"));
+      config2 = JSON.parse(readFileSync18(cliConfigPath, "utf8"));
     }
   } catch (e) {
     log(`mcp-discovery: config read failed (${e instanceof Error ? e.message : String(e)})`);
@@ -40615,7 +40671,7 @@ function loadMcpServers() {
     if (!existsSync9(mcpFile))
       continue;
     try {
-      const mcpConfig = JSON.parse(readFileSync17(mcpFile, "utf8"));
+      const mcpConfig = JSON.parse(readFileSync18(mcpFile, "utf8"));
       const serverMap = mcpConfig["mcpServers"] ?? mcpConfig;
       for (const [name, cfg] of Object.entries(serverMap)) {
         results.push({
@@ -40703,7 +40759,7 @@ var init_mcp_discovery = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/config/plugin-commands.js
-import { existsSync as existsSync10, readFileSync as readFileSync18, readdirSync as readdirSync5, statSync as statSync7 } from "node:fs";
+import { existsSync as existsSync10, readFileSync as readFileSync19, readdirSync as readdirSync5, statSync as statSync7 } from "node:fs";
 import path23 from "node:path";
 function parseFrontmatter(content) {
   const fm = {};
@@ -40731,7 +40787,7 @@ function loadPluginCommands() {
   if (!existsSync10(cliConfigPath) || !existsSync10(pluginCacheDir))
     return [];
   try {
-    const cfg = JSON.parse(readFileSync18(cliConfigPath, "utf8"));
+    const cfg = JSON.parse(readFileSync19(cliConfigPath, "utf8"));
     const enabled = cfg.plugins?.enabledPlugins ?? {};
     const entries = [];
     for (const [pluginKey, enabledFlag] of Object.entries(enabled)) {
@@ -40764,7 +40820,7 @@ function loadPluginCommands() {
         if (!file2.endsWith(".md"))
           continue;
         const cmdPath = path23.join(commandsDir, file2);
-        const content = readFileSync18(cmdPath, "utf8");
+        const content = readFileSync19(cmdPath, "utf8");
         const fm = parseFrontmatter(content);
         const name = file2.replace(/\.md$/, "");
         const description = fm["description"] ?? "";
@@ -40791,7 +40847,7 @@ var init_plugin_commands = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/config/skill-discovery.js
-import { existsSync as existsSync11, readFileSync as readFileSync19, readdirSync as readdirSync6, statSync as statSync8 } from "node:fs";
+import { existsSync as existsSync11, readFileSync as readFileSync20, readdirSync as readdirSync6, statSync as statSync8 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import path24 from "node:path";
 import process12 from "node:process";
@@ -40853,7 +40909,7 @@ function scanSkillDir(dir, disabledPaths, results, seen) {
     const absPath = path24.resolve(skillMd);
     if (disabledPaths.has(absPath))
       continue;
-    const content = readFileSync19(skillMd, "utf8");
+    const content = readFileSync20(skillMd, "utf8");
     const fm = parseFrontmatter2(content);
     const name = fm["name"] ?? entry;
     const description = fm["description"] ?? "";
@@ -40882,7 +40938,7 @@ function loadSkillCommands() {
   try {
     const cliConfigPath = zcodeCliConfigPath();
     if (existsSync11(cliConfigPath)) {
-      config2 = JSON.parse(readFileSync19(cliConfigPath, "utf8"));
+      config2 = JSON.parse(readFileSync20(cliConfigPath, "utf8"));
     }
   } catch (e) {
     log(`skill-discovery: config read failed (${e instanceof Error ? e.message : String(e)})`);
@@ -50423,14 +50479,14 @@ async function reexecToBunIfEligible(entryJs, argv) {
 init_utils();
 
 // node_modules/zcode-acp-server/dist/remote/code-fingerprint.js
-import { readFileSync as readFileSync20 } from "node:fs";
+import { readFileSync as readFileSync21 } from "node:fs";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 function codeFingerprintPath(distDir) {
   return distDir ? `${distDir.replace(/\/$/, "")}/code-fingerprint.json` : fileURLToPath2(new URL("../code-fingerprint.json", import.meta.url));
 }
 function readCodeFingerprint(distDir) {
   try {
-    const parsed = JSON.parse(readFileSync20(codeFingerprintPath(distDir), "utf8"));
+    const parsed = JSON.parse(readFileSync21(codeFingerprintPath(distDir), "utf8"));
     return typeof parsed.fingerprint === "string" ? parsed.fingerprint : null;
   } catch {
     return null;
@@ -50979,7 +51035,7 @@ init_atomic_write();
 
 // node_modules/zcode-acp-server/dist/settings/workflow-run-dismissals.js
 init_utils();
-import { existsSync as existsSync13, mkdirSync as mkdirSync7, readFileSync as readFileSync21, renameSync as renameSync6, writeFileSync as writeFileSync6 } from "node:fs";
+import { existsSync as existsSync13, mkdirSync as mkdirSync7, readFileSync as readFileSync22, renameSync as renameSync6, writeFileSync as writeFileSync6 } from "node:fs";
 import path29 from "node:path";
 import process16 from "node:process";
 var STORE_FILENAME3 = "acp-workflow-run-dismissals.json";
@@ -50992,7 +51048,7 @@ function readTable3() {
     const p = storePath3();
     if (!existsSync13(p))
       return {};
-    const raw = JSON.parse(readFileSync21(p, "utf8"));
+    const raw = JSON.parse(readFileSync22(p, "utf8"));
     if (typeof raw !== "object" || raw === null)
       return {};
     const out = {};
@@ -55665,7 +55721,7 @@ init_quota();
 init_resume();
 init_file_lock();
 import { randomUUID as randomUUID15 } from "node:crypto";
-import { existsSync as existsSync14, mkdirSync as mkdirSync8, readFileSync as readFileSync22, renameSync as renameSync7, unlinkSync as unlinkSync4, writeFileSync as writeFileSync7 } from "node:fs";
+import { existsSync as existsSync14, mkdirSync as mkdirSync8, readFileSync as readFileSync23, renameSync as renameSync7, unlinkSync as unlinkSync4, writeFileSync as writeFileSync7 } from "node:fs";
 import path32 from "node:path";
 import process17 from "node:process";
 init_utils();
@@ -55704,7 +55760,7 @@ function readTable4() {
     const p = storePath4();
     if (!existsSync14(p))
       return {};
-    const raw = JSON.parse(readFileSync22(p, "utf8"));
+    const raw = JSON.parse(readFileSync23(p, "utf8"));
     const table = asRecord2(raw);
     if (!table)
       return {};
@@ -56047,8 +56103,8 @@ async function fire(server, runId, deps = {}) {
     return;
   }
   const query = deps.queryQuota ?? queryQuota;
-  const quota = await query().catch(() => ({ kind: "unavailable" }));
-  const resetAt = quotaResetAtFromResult(quota);
+  const quota2 = await query().catch(() => ({ kind: "unavailable" }));
+  const resetAt = quotaResetAtFromResult(quota2);
   if (resetAt !== void 0) {
     await reschedule(server, claimed, {
       resumeAt: resetAt + FIRE_MARGIN_MS,
@@ -56298,31 +56354,40 @@ init_credentials();
 init_account_provider();
 init_project_token();
 init_parse3();
+init_templates();
 var regions = { bigmodel: "https://open.bigmodel.cn", zai: "https://api.z.ai" };
 var noPlan = /不存在\s*coding\s*plan|no\s+coding\s+plan/i;
-async function codingPlan(family, origin, legacy, request) {
-  const id = accountProviderIdFor("builtin:" + family + "-coding-plan");
-  let key = codingPlanRequestAuthFor(id)?.apiKey;
-  if (!key && oauthProjectTokenFamilyFor(id) === family) key = (await resolveOAuthProjectToken(family)).token;
-  if (!key && legacy.providerBaseURL && new URL(legacy.providerBaseURL).origin === origin) key = legacy.ANTHROPIC_API_KEY;
-  if (!key) return { state: "absent", windows: [] };
+var KEYS_PER_PLATFORM = 3;
+async function quota(origin, key, request) {
   const response = await request(origin + "/api/monitor/usage/quota/limit", {
     headers: { Authorization: "Bearer " + key },
     redirect: "error",
     signal: AbortSignal.timeout(8e3)
   });
-  if (!response.ok) return { state: "unknown", windows: [] };
+  if (!response.ok) return { state: "unknown", items: [] };
   const json2 = await response.json();
-  if (json2?.success === false && noPlan.test(String(json2.msg ?? ""))) return { state: "none", windows: [] };
+  if (json2?.success === false && noPlan.test(String(json2.msg ?? ""))) return { state: "none", items: [] };
   const result = parseQuotaEnvelope({ status: response.status, json: json2, text: "" });
-  if (result.kind !== "success") return { state: "unknown", windows: [] };
+  return result.kind === "success" ? { state: "active", items: result.items } : { state: "unknown", items: [] };
+}
+async function codingPlan(family, origin, legacy, request, apiKeys) {
+  const id = accountProviderIdFor("builtin:" + family + "-coding-plan");
+  let key = codingPlanRequestAuthFor(id)?.apiKey;
+  if (!key && oauthProjectTokenFamilyFor(id) === family) key = (await resolveOAuthProjectToken(family)).token;
+  if (!key && legacy.providerBaseURL && new URL(legacy.providerBaseURL).origin === origin) key = legacy.ANTHROPIC_API_KEY;
+  const keys = [...key ? [{ key, name: "" }] : [], ...apiKeys.filter((entry) => entry.key !== key)].slice(0, KEYS_PER_PLATFORM);
+  if (!keys.length) return { state: "absent", windows: [] };
+  const platform3 = family === "zai" ? "Z.ai" : "BigModel";
+  const results = await Promise.all(keys.map((entry) => quota(origin, entry.key, request).catch(() => ({ state: "unknown", items: [] }))));
+  const state2 = ["active", "none", "unknown"].find((value) => results.some((result) => result.state === value));
   return {
-    state: "active",
-    windows: result.items.map((item) => ({
-      label: (family === "zai" ? "Z.ai" : "BigModel") + " \xB7 " + item.label,
+    state: state2,
+    windows: results.flatMap((result, index) => result.items.map((item) => ({
+      // Several keys of one platform are told apart by their ZCode names.
+      label: (keys.length > 1 && keys[index].name ? keys[index].name : platform3) + " \xB7 " + item.label,
       remainingPercent: item.leftPercent,
       ...item.nextResetTime > 0 ? { resetsAt: item.nextResetTime } : {}
-    }))
+    })))
   };
 }
 function shown(row) {
@@ -56330,8 +56395,9 @@ function shown(row) {
 }
 async function readCodingPlans(request = fetch) {
   const legacy = loadZcodeCredentials();
+  const apiKeys = codingPlanApiKeys();
   const entries = await Promise.all(Object.entries(regions).map(async ([family, origin]) => {
-    const plan = await codingPlan(family, origin, legacy, request).catch(() => ({ state: "unknown", windows: [] }));
+    const plan = await codingPlan(family, origin, legacy, request, apiKeys[family]).catch(() => ({ state: "unknown", windows: [] }));
     return [family, plan];
   }));
   const plans = Object.fromEntries(entries.map(([family, plan]) => [family, plan.state]));
@@ -56344,6 +56410,7 @@ async function readPlanUsage(request = fetch) {
 
 // account.mjs
 init_credential_store();
+init_templates();
 var families = ["bigmodel", "zai"];
 function printable(value) {
   if (typeof value !== "string") return void 0;
@@ -56358,14 +56425,20 @@ function displayName(raw) {
     return void 0;
   }
 }
+function apiKeyPlatforms() {
+  const keys = codingPlanApiKeys();
+  return families.filter((family) => keys[family].length);
+}
 function readAccount() {
   const store = readCredentialStoreSync();
   const signedIn = (family2) => !!store[`oauth:${family2}:access_token`]?.trim();
   const active2 = store["oauth:active_provider"]?.trim();
   const family = families.includes(active2) && signedIn(active2) ? active2 : families.find(signedIn);
-  if (!family) return { signedIn: false };
+  const apiKeys = apiKeyPlatforms();
+  const keys = apiKeys.length ? { apiKeys } : {};
+  if (!family) return { signedIn: false, ...keys };
   const name = displayName(store[`oauth:${family}:user_info`]);
-  return { signedIn: true, family, ...name ? { name } : {} };
+  return { signedIn: true, family, ...name ? { name } : {}, ...keys };
 }
 
 // adapter.mjs

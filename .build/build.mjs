@@ -34,7 +34,7 @@ const adaptations = {
     'const file = loadUserConfig(env).session?.mode;\n    if (file !== undefined)\n        return file;\n    return env.ZCODE_ACP_MODE || "yolo";',
     'return "build";'),
   "config/options.js": source => {
-    source = 'import { cindyMode, cindyModeOptions } from "cindy-modes";\n' + source;
+    source = 'import { cindyMode, cindyModeOptions } from "cindy-modes";\nimport { withProviderTemplate } from "cindy-templates";\n' + source;
     source = replaceOnce(source, "currentValue: currentMode,", "currentValue: cindyMode(currentMode),");
     source = replaceOnce(source, "options: [...CONFIG_META.mode.options]", "options: cindyModeOptions(CONFIG_META.mode.options)");
     // set_config_option switches the same plan flag as upstream's set_mode.
@@ -43,15 +43,18 @@ const adaptations = {
       'if (configId === "mode") {\n        if (value === "plan") server.sessionPlanActive.add(zcodeSid);\n        else server.sessionPlanActive.delete(zcodeSid);\n    }\n    return { kind: configId, currentValue: value };');
     // The official CLI accepts a provider that lists personalModelIds with no
     // per-model overrides. Include those IDs in both the picker and the task.
+    // A provider made from a ZCode template takes its address and default
+    // models from that template, as the CLI does.
     source = replaceOnce(source, "out.providers.push({ pid: configProviderIdFor(rule.providerId), rule });",
       `const pid = configProviderIdFor(rule.providerId);
-        const personalIds = rule.config?.personalModelIds;
+        const entry = withProviderTemplate(rule);
+        const personalIds = entry.config?.personalModelIds;
         if (Array.isArray(personalIds)) {
             const disabled = new Set(modelRules.filter(m => m.providerId === rule.providerId && m.config?.enabled === false).map(m => m.modelId));
             const ids = (out.modelsByProvider.get(pid) ?? []).concat(personalIds);
             out.modelsByProvider.set(pid, [...new Set(ids)].filter(id => typeof id === "string" && !disabled.has(id)));
         }
-        out.providers.push({ pid, rule });`);
+        out.providers.push({ pid, rule: entry });`);
     // ZCode serves Start Plan only to its own desktop app: model requests from
     // this bridge are refused with 3012 "This client is not supported". Every
     // model menu, session default and model switch reads this one list.
@@ -101,7 +104,7 @@ const upstream = path.join(modules, "zcode-acp-server");
 const output = await build({
   absWorkingDir: here, entryPoints: ["adapter.mjs"], outfile: path.join(dist, "adapter.mjs"),
   bundle: true, format: "esm", platform: "node", target: "node22", metafile: true,
-  alias: { "cindy-modes": path.join(here, "modes.mjs") },
+  alias: { "cindy-modes": path.join(here, "modes.mjs"), "cindy-templates": path.join(here, "templates.mjs") },
   // Some CommonJS dependencies require Node built-ins from the ESM bundle.
   banner: { js: 'import { createRequire as cindyCreateRequire } from "node:module"; const require = cindyCreateRequire(import.meta.url);' },
   external: ["bufferutil", "utf-8-validate"],

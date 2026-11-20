@@ -31,13 +31,15 @@
 - 使用桌面版时，登录、切换和退出账号都在 ZCode 桌面版里完成。卡片上的按钮会打开 ZCode，回到 Cindy 后自动重新检测。桌面版随附的命令行没有自己的系统钥匙串模块，不能单独登录。
 - 使用独立安装的 ZCode CLI 时，可以在卡片里选择平台登录（`zcode login bigmodel` 或 `zcode login zai`，在浏览器中授权）和退出登录（`zcode logout`）。
 
-Cindy 不读取也不保存登录令牌，账号检查只取平台、显示名称和套餐状态。
+不登录也可以：在 ZCode 桌面版的模型设置里添加「BigModel Coding Plan」或「Z.ai Coding Plan」API Key 后，这些模型会出现在 Cindy 的模型选择器里，卡片显示「API Key · 平台」和这个 Key 的 Coding Plan 状态。ZCode 3.18 只在这类服务商里保存所用模板和 Key，地址与默认模型来自 ZCode 自带配置中的模板，插件按同一模板读取。
+
+Cindy 不读取也不保存登录令牌，账号检查只取平台、显示名称和套餐状态。API Key 只发给它所属平台的额度查询服务。
 
 ZCode 的 Start Plan 只服务 ZCode 桌面版，其他客户端调用时返回 3012「This client is not supported」，因此模型列表、任务默认模型和任务中的模型切换都不包含 Start Plan 模型。
 
 ## 账号用量
 
-设置页显示 ZCode 账号的智谱 BigModel 或 Z.ai GLM Coding Plan 额度。账号检查和用量共用每个平台的一次额度查询。自定义模型服务没有提供套餐数据时，页面会显示提示。支持插件用量的 Cindy 也会在使用此引擎的任务输入框下方显示用量，点击可看明细。旁边的圆环显示当前任务由引擎上报的上下文占用。
+设置页显示 ZCode 账号的智谱 BigModel 或 Z.ai GLM Coding Plan 额度。账号检查和用量共用一次额度查询，每个不同的 Key 查询一次，同一平台最多 3 个。额度服务拒绝某个 Key 时，卡片只说明暂时读不到额度，不据此判断 Key 无效：2026-11-20 BigModel 的额度服务拒绝过一个能正常运行 GLM-5.3 的 Coding Plan API Key。自定义模型服务没有提供套餐数据时，页面会显示提示。支持插件用量的 Cindy 也会在使用此引擎的任务输入框下方显示用量，点击可看明细。旁边的圆环显示当前任务由引擎上报的上下文占用。
 
 ## 开发
 
@@ -51,7 +53,7 @@ node build.mjs
 
 Windows 的 Git Bash 自带的 tar 会把 `C:` 当成远程主机，构建时请让系统自带的 `C:\Windows\System32\tar.exe` 排在 PATH 前面。
 
-单元测试从插件根目录运行 `node --test .test/usage.test.mjs .test/account.test.mjs`，使用临时用户目录和替身 ZCode 安装，不读取本机的 ZCode。集成测试使用官方 ZCode 和临时本地模型服务：运行 `node --test .test/desktop.test.mjs`，并通过 `ZCODE_TEST_BIN` 指定测试用 `zcode.cjs` 的绝对路径。测试另建用户目录和工作目录。通过 Cindy Forge 打包本目录即可生成安装包。
+单元测试从插件根目录运行 `node --test .test/usage.test.mjs .test/account.test.mjs .test/api-key.test.mjs`，使用临时用户目录和替身 ZCode 安装，不读取本机的 ZCode。集成测试使用官方 ZCode 和临时本地模型服务：运行 `node --test .test/desktop.test.mjs`，并通过 `ZCODE_TEST_BIN` 指定测试用 `zcode.cjs` 的绝对路径。测试另建用户目录和工作目录。通过 Cindy Forge 打包本目录即可生成安装包。
 
 ## 发布新版本
 

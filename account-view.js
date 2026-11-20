@@ -21,6 +21,11 @@
       planNone: '这个账号还没有开通 GLM Coding Plan，开通后才能在 Cindy 里使用 ZCode。',
       planUnknown: '暂时没能确认这个账号的 GLM Coding Plan，可以稍后点刷新图标重查。',
       planLink: '去开通 GLM Coding Plan ↗',
+      apiKey: family => 'API Key · ' + strings.zh.family[family],
+      planNoneKey: '这个 API Key 所在的账号还没有开通 GLM Coding Plan，开通后才能在 Cindy 里使用 ZCode。',
+      planUnknownKey: '暂时读不到这个 API Key 的 Coding Plan 额度，不影响在 Cindy 里使用。',
+      desktopKey: 'ZCode 使用你在模型设置里填写的 GLM Coding Plan API Key，不需要登录。更换或删除 Key 请在 ZCode 桌面版的模型设置里操作。',
+      cliKey: 'ZCode 使用你配置的 GLM Coding Plan API Key，不需要登录。',
       helpSignedIn: '登录信息由 ZCode 自己保存，Cindy 不保存。ZCode 桌面版用的也是这个账号。',
       helpSignedOut: '选择开通了 GLM Coding Plan 的平台登录，会在浏览器里完成授权。登录信息由 ZCode 自己保存，Cindy 不保存；ZCode 桌面版也会换成这个账号。',
       helpSigningIn: '请在打开的浏览器窗口里完成授权，最多等 5 分钟。',
@@ -48,6 +53,11 @@
       planNone: 'This account has no GLM Coding Plan yet. Subscribe to use ZCode in Cindy.',
       planUnknown: 'Couldn’t confirm this account’s GLM Coding Plan. Use the refresh icon to check again later.',
       planLink: 'Get a GLM Coding Plan ↗',
+      apiKey: family => 'API key · ' + strings.en.family[family],
+      planNoneKey: 'The account behind this API key has no GLM Coding Plan yet. Subscribe to use ZCode in Cindy.',
+      planUnknownKey: 'Coding Plan quota for this API key can’t be read right now. ZCode still works in Cindy.',
+      desktopKey: 'ZCode uses the GLM Coding Plan API key from its model settings; no sign-in needed. Change or remove the key in the ZCode desktop app’s model settings.',
+      cliKey: 'ZCode uses your GLM Coding Plan API key; no sign-in needed.',
       helpSignedIn: 'ZCode keeps your sign-in; Cindy doesn’t store it. The ZCode desktop app uses the same account.',
       helpSignedOut: 'Sign in with the platform where you subscribed to the GLM Coding Plan; authorization finishes in your browser. ZCode keeps your sign-in and Cindy doesn’t store it. The ZCode desktop app switches to this account too.',
       helpSigningIn: 'Finish authorizing in the browser window that opened (up to 5 minutes).',
@@ -105,11 +115,18 @@
     $('account-title').textContent = t.title;
     let status = t.checking;
     let tone = '';
+    // A Coding Plan API key in ZCode's model settings needs no sign-in.
+    const keyed = state.signedIn === false && state.apiKeys?.length > 0;
+    const platform = state.signedIn === true ? state.family : keyed ? state.apiKeys[0] : undefined;
+    const tones = { active: 'success', none: 'warning' };
     if (busy === 'login') status = t.signingIn;
     else if (busy === 'logout') status = t.signingOut;
     else if (state.signedIn === true) {
       status = [t.family[state.family], state.name].filter(Boolean).join(' · ');
-      tone = state.plan === 'active' ? 'success' : state.plan === 'none' ? 'warning' : '';
+      tone = tones[state.plan] || '';
+    } else if (keyed) {
+      status = t.apiKey(platform);
+      tone = tones[state.plan] || '';
     } else if (state.signedIn === false) {
       status = t.signedOut;
       tone = 'warning';
@@ -119,10 +136,10 @@
 
     const plan = $('account-plan');
     plan.replaceChildren();
-    if (!busy && state.signedIn === true && state.family) {
+    if (!busy && platform) {
       if (state.plan === 'active') plan.append(t.planActive);
-      else if (state.plan === 'none') plan.append(t.planNone, ' ', link(t.planLink, planPages[state.family]));
-      else if (state.plan === 'unknown') plan.append(t.planUnknown);
+      else if (state.plan === 'none') plan.append(keyed ? t.planNoneKey : t.planNone, ' ', link(t.planLink, planPages[platform]));
+      else if (state.plan === 'unknown') plan.append(keyed ? t.planUnknownKey : t.planUnknown);
     }
     plan.hidden = !plan.childNodes.length;
 
@@ -131,6 +148,7 @@
     help.replaceChildren();
     const helpText = busy === 'login' ? t.helpSigningIn : busy ? '' :
       state.signedIn === true ? (desktop ? t.desktopSignedIn : t.helpSignedIn) :
+      keyed ? (desktop ? t.desktopKey : t.cliKey) :
       state.signedIn === false ? (desktop ? t.desktopSignedOut : t.helpSignedOut) : '';
     if (helpText) help.append(helpText);
     if (busy === 'login' && state.url) help.append(' ', link(t.openLink, state.url));
@@ -139,10 +157,12 @@
     const actions = $('account-actions');
     actions.replaceChildren();
     if (desktop && !busy && typeof state.signedIn === 'boolean') {
-      const label = !state.signedIn ? t.openSignIn : state.plan !== 'active' ? t.openSwitch : t.openApp;
+      const label = keyed ? t.openApp : !state.signedIn ? t.openSignIn : state.plan !== 'active' ? t.openSwitch : t.openApp;
       actions.append(button(label, () => request('open')));
     } else if (busy === 'login') actions.append(button(t.cancel, () => request('cancel')));
-    else if (!busy && state.signedIn === false) {
+    else if (!busy && keyed) {
+      // A standalone CLI with an API key runs without a sign-in.
+    } else if (!busy && state.signedIn === false) {
       for (const family of families) actions.append(button(t.login(family), () => request('login', family)));
     } else if (!busy && state.signedIn === true && !confirming) {
       if (state.plan !== 'active') {

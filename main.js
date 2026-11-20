@@ -77,12 +77,16 @@
         const response = await cindy.node.request({ method: 'account', params: { fresh }, timeoutMs: 30000 });
         const next = response?.ok ? response.result : null;
         if (!accountOp && next && typeof next.signedIn === 'boolean') {
+          // A Coding Plan API key in ZCode's model settings works without a sign-in.
+          const apiKeys = Array.isArray(next.apiKeys) ? next.apiKeys.filter(family => ['bigmodel', 'zai'].includes(family)) : [];
           account = {
             signedIn: next.signedIn,
             signIn: next.signIn === 'cli' ? 'cli' : 'desktop',
             ...(next.signedIn && ['bigmodel', 'zai'].includes(next.family) ? { family: next.family } : {}),
             ...(next.signedIn && typeof next.name === 'string' ? { name: next.name.slice(0, 80) } : {}),
-            ...(next.signedIn && ['active', 'none', 'absent', 'unknown'].includes(next.plan) ? { plan: next.plan } : {}),
+            ...(apiKeys.length ? { apiKeys } : {}),
+            ...((next.signedIn || apiKeys.length) && ['active', 'none', 'absent', 'unknown'].includes(next.plan) ?
+              { plan: next.plan } : {}),
           };
         } else if (!accountOp) {
           account = { signedIn: account.signedIn, signIn: account.signIn, failed: true };

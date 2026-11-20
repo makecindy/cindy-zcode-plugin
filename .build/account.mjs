@@ -1,4 +1,5 @@
 import { readCredentialStoreSync } from 'zcode-acp-server/dist/backend/credential-store.js';
+import { codingPlanApiKeys } from './templates.mjs';
 
 // ZCode keeps one OAuth sign-in at a time in its shared credential store: the
 // desktop app and `zcode login <family>` both replace the previous account.
@@ -22,12 +23,21 @@ function displayName(raw) {
   }
 }
 
+// Platforms with a Coding Plan API key in ZCode's model settings. Such a key
+// works without a sign-in; only the platform names leave this function.
+function apiKeyPlatforms() {
+  const keys = codingPlanApiKeys();
+  return families.filter(family => keys[family].length);
+}
+
 export function readAccount() {
   const store = readCredentialStoreSync();
   const signedIn = family => !!store[`oauth:${family}:access_token`]?.trim();
   const active = store['oauth:active_provider']?.trim();
   const family = families.includes(active) && signedIn(active) ? active : families.find(signedIn);
-  if (!family) return { signedIn: false };
+  const apiKeys = apiKeyPlatforms();
+  const keys = apiKeys.length ? { apiKeys } : {};
+  if (!family) return { signedIn: false, ...keys };
   const name = displayName(store[`oauth:${family}:user_info`]);
-  return { signedIn: true, family, ...(name ? { name } : {}) };
+  return { signedIn: true, family, ...(name ? { name } : {}), ...keys };
 }

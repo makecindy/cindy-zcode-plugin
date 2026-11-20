@@ -67,10 +67,12 @@ try {
   } else if (process.argv[2] === '--detect') {
     process.stdout.write(JSON.stringify(await detect()) + '\n');
   } else if (process.argv[2] === '--account') {
-    // Account status and usage share one quota read per family.
+    // Account status and usage share one quota read per credential. Without a
+    // sign-in, the plan is the one behind the Coding Plan API key in ZCode.
     const account = readAccount();
     const { plans, usage } = await readCodingPlans();
-    const plan = account.signedIn ? plans[account.family] : undefined;
+    const platform = account.signedIn ? account.family : account.apiKeys?.[0];
+    const plan = platform ? plans[platform] : undefined;
     process.stdout.write(JSON.stringify({ account: { ...account, ...(plan ? { plan } : {}) }, usage }) + '\n');
   } else {
     await serve();
