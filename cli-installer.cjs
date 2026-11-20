@@ -75,7 +75,20 @@ async function ensureZCodeClosed() {
   fail('close-zcode');
 }
 
-async function installMac(release, current) {
+/** Settings-page steps between "get the official version" and "confirm". */
+function plan() {
+  return win ? ['download', 'wizard'] : ['download', 'extract', 'signature', 'activate'];
+}
+
+/** Downloads the official package with byte progress for the settings page. */
+async function fetchPackage(release, file, report) {
+  report.step('download');
+  const size = await download(release.url, ['https://github.com', 'https://release-assets.githubusercontent.com'],
+    file, 'sha256', release.digest, 512 * 1024 * 1024, release.size, (loaded, total) => report.bytes(loaded, total));
+  report.note('downloaded', { size });
+}
+
+async function installMac(release, current, report) {
   const bundledEntry = '/Contents/Resources/glm/zcode.cjs';
   const target = current.path?.endsWith('/ZCode.app' + bundledEntry) ?
     current.path.slice(0, -bundledEntry.length) : path.join(os.homedir(), 'Applications', 'ZCode.app');
@@ -86,13 +99,15 @@ async function installMac(release, current) {
   let backedUp = false;
   try {
     const file = path.join(stage, release.name);
-    await download(release.url, ['https://github.com', 'https://release-assets.githubusercontent.com'],
-      file, 'sha256', release.digest, 512 * 1024 * 1024, release.size);
+    await fetchPackage(release, file, report);
+    report.step('extract');
     await run('/usr/bin/ditto', ['-x', '-k', file, stage], { timeout: 60000 });
     const app = path.join(stage, 'ZCode.app');
     if (!(await fs.lstat(app)).isDirectory()) fail('integrity');
+    report.step('signature');
     await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', app], { timeout: 60000 });
     if (!(await fs.stat(path.join(app, bundledEntry))).isFile()) fail('verify');
+    report.step('activate');
     await ensureZCodeClosed();
     try {
       if (!(await fs.lstat(target)).isDirectory()) fail('operation');
@@ -119,17 +134,18 @@ async function installMac(release, current) {
   }
 }
 
-async function install(release, current) {
-  if (!win) return installMac(release, current);
+async function install(release, current, report) {
+  if (!win) return installMac(release, current, report);
   const stage = await fs.mkdtemp(path.join(os.tmpdir(), 'zcode-install-'));
   try {
     const file = path.join(stage, release.name);
-    await download(release.url, ['https://github.com', 'https://release-assets.githubusercontent.com'],
-      file, 'sha256', release.digest, 512 * 1024 * 1024, release.size);
+    await fetchPackage(release, file, report);
+    // The official wizard opens its own window; the settings page asks the user to finish it there.
+    report.step('wizard');
     await run(file, [], { timeout: 240000, windowsHide: false });
   } finally {
     await fs.rm(stage, { recursive: true, force: true }).catch(() => {});
   }
 }
 
-module.exports = createMaintenance({ latest, installed, install });
+module.exports = createMaintenance({ latest, installed, install, plan });

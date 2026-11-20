@@ -198,10 +198,84 @@
   }
   const context = Promise.resolve().then(() => cindy.request({ kind: 'app-context' }))
     .then(response => useLocale(response?.context)).catch(() => {});
+  // CLI install / update. The worker reports steps, byte counts and cleaned installer output as
+  // `cli-progress` notifications; only the fields checked below reach the settings page. The
+  // last install log stays here (memory only) so reopening settings shows it again.
+  const CLI_STEPS = ['resolve', 'node', 'npm', 'download', 'extract', 'signature', 'probe', 'activate',
+    'wizard', 'native', 'confirm'];
+  const CLI_NOTES = ['versions', 'node', 'downloaded', 'probe', 'done', 'current', 'failed'];
+  const CLI_LOG_LIMIT = 300;
   const cliRequests = new Set();
   let cliState = {};
+  let cliProgress = null;
+  let cliAnnounceTimer;
   function announceCliState() {
-    channel.postMessage({ type: 'cli-state', ...cliState });
+    clearTimeout(cliAnnounceTimer);
+    cliAnnounceTimer = undefined;
+    if (!channel) return;
+    let progress;
+    if (cliProgress) {
+      const { startedAt, endedAt, rateAt, rateFrom, ...rest } = cliProgress;
+      progress = { ...rest, log: cliProgress.log.slice(), elapsedMs: (endedAt || Date.now()) - startedAt };
+    }
+    channel.postMessage({ type: 'cli-state', ...cliState, ...(progress ? { progress } : {}) });
+  }
+  function announceCliStateSoon() {
+    cliAnnounceTimer ??= setTimeout(announceCliState, 250);
+  }
+  const cliCount = value => (Number.isSafeInteger(value) && value >= 0 ? value : undefined);
+  function cliVars(vars) {
+    const clean = {};
+    for (const key of ['version', 'latest', 'current', 'size', 'code']) {
+      const value = vars?.[key];
+      if (typeof value === 'string' && value.length <= 64) clean[key] = value;
+      else if (cliCount(value) !== undefined) clean[key] = value;
+    }
+    return clean;
+  }
+  function addCliLog(entry) {
+    cliProgress.log.push({ at: Date.now() - cliProgress.startedAt, ...entry });
+    if (cliProgress.log.length > CLI_LOG_LIMIT) {
+      cliProgress.log.shift();
+      cliProgress.dropped = (cliProgress.dropped || 0) + 1;
+    }
+  }
+  function applyCliProgress(params) {
+    if (!cliProgress || params?.op !== cliProgress.reqId || !Array.isArray(params.events)) return;
+    // A late batch can arrive after the result: keep its log lines, not its step or bytes.
+    const running = cliState.active && cliState.reqId === cliProgress.reqId;
+    for (const event of params.events.slice(0, 200)) {
+      if (!event || typeof event !== 'object') continue;
+      if (CLI_STEPS.includes(event.step)) {
+        if (!running) continue;
+        Object.assign(cliProgress, { step: event.step, index: cliCount(event.index), count: cliCount(event.count),
+          loaded: undefined, total: undefined, speed: undefined, rateAt: undefined, rateFrom: undefined });
+      } else if (cliCount(event.loaded) !== undefined) {
+        if (!running) continue;
+        // Speed over at least half a second, smoothed, so it does not jump with each batch.
+        const now = Date.now();
+        if (!cliProgress.rateAt || event.loaded < cliProgress.rateFrom) {
+          Object.assign(cliProgress, { rateAt: now, rateFrom: event.loaded, speed: undefined });
+        } else if (now - cliProgress.rateAt >= 500) {
+          const rate = (event.loaded - cliProgress.rateFrom) * 1000 / (now - cliProgress.rateAt);
+          cliProgress.speed = Math.round(cliProgress.speed === undefined ? rate : cliProgress.speed * 0.6 + rate * 0.4);
+          Object.assign(cliProgress, { rateAt: now, rateFrom: event.loaded });
+        }
+        cliProgress.loaded = event.loaded;
+        cliProgress.total = cliCount(event.total) || undefined;
+      } else if (CLI_NOTES.includes(event.note)) {
+        addCliLog({ note: event.note, vars: cliVars(event.vars) });
+      } else if (typeof event.log === 'string' && event.log) {
+        addCliLog({ text: event.log.slice(0, 240) });
+      }
+    }
+    announceCliStateSoon();
+  }
+  // Only this plugin's install progress; other worker notifications (e.g. sign-in links) pass through.
+  function handleCliProgress(message) {
+    if (message?.type !== 'event' || message.name !== 'node-notification' || message.method !== 'cli-progress') return false;
+    applyCliProgress(message.params);
+    return true;
   }
   function handleCliMaintenance(data) {
     if (data?.type === 'cli-state-request') {
@@ -220,19 +294,27 @@
     if (cliRequests.size > 64) cliRequests.delete(cliRequests.values().next().value);
     const version = typeof data.version === 'string' ? data.version.slice(0, 64) : undefined;
     cliState = { active: true, reqId, action };
+    if (action !== 'check') cliProgress = { reqId, action, startedAt: Date.now(), log: [] };
     announceCliState();
     void (async () => {
       let result;
       try {
         const response = await cindy.node.request({
-          method: 'cliMaintenance', params: { action, version },
+          method: 'cliMaintenance', params: { action, version, op: reqId },
           timeoutMs: action === 'check' ? 50000 : 60000,
           ...(action === 'check' ? {} : { maxTotalMs: 840000 }),
         });
         if (response?.ok) result = response.result;
         if (result?.state === 'installed') void refresh();
-      } catch { /* Report a failed operation without exposing installer output. */ }
+      } catch { /* The install log already holds what the installer printed. */ }
       cliState = { reqId, action, result: result || { error: 'operation' } };
+      if (action !== 'check' && cliProgress?.reqId === reqId) {
+        const outcome = cliState.result;
+        if (outcome.state === 'installed') addCliLog({ note: 'done', vars: cliVars({ version: outcome.version }) });
+        else if (outcome.state === 'current') addCliLog({ note: 'current', vars: cliVars({ version: outcome.version }) });
+        else if (outcome.error) addCliLog({ note: 'failed', vars: cliVars({ code: outcome.error }) });
+        cliProgress.endedAt = Date.now();
+      }
       announceCliState();
     })();
     return true;
@@ -267,6 +349,7 @@
       }
       return;
     }
+    if (handleCliProgress(message)) return;
     if (message?.type === 'harnesses-refresh-requested') {
       await context;
       await refresh();

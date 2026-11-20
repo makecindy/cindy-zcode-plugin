@@ -176,7 +176,8 @@ readline.createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line
   if (request?.id == null) return;
   switch (request.method) {
     case 'cliMaintenance': {
-      const result = await maintain(request.params, () => send({ method: 'progress' }));
+      // 'progress' keeps the request alive; 'cli-progress' carries install steps for the settings page.
+      const result = await maintain(request.params, (method, params) => send({ method, ...(params ? { params } : {}) }));
       return reply(request.id, { result });
     }
     case 'usage': {

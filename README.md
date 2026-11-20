@@ -1,6 +1,6 @@
 # ZCode for Cindy
 
-在 Cindy 打开 ZCode 插件设置，可检测本机 CLI、从 Z.ai 的 GitHub Releases 安装及检查更新。官方公开安装包自带 CLI。macOS 首次安装放在当前用户的 Applications 目录，Windows 由官方安装向导完成。
+在 Cindy 打开 ZCode 插件设置，可检测本机 CLI、从 Z.ai 的 GitHub Releases 安装及检查更新。官方公开安装包自带 CLI。macOS 首次安装放在当前用户的 Applications 目录，Windows 由官方安装向导完成，向导打开期间设置页会提示到安装窗口里继续。安装或更新时，设置页显示当前步骤、已用时间，下载时显示进度、速度和剩余时间；可展开的安装日志列出每一步和安装程序的输出（用户目录显示为 ~，凭据会被隐去）。日志只保存在插件运行期间，重新打开设置页也能看到。
 
 从旧版升级时，请从新仓库下载 .cindy 文件并在 Cindy 导入一次，之后插件更新将使用 makecindy 下的新地址。
 
