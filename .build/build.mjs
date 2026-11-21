@@ -69,12 +69,37 @@ function loadAllModelsWithStartPlan() {`);
       "return [\n        {\n            providerId: DEFAULT_PROVIDER_ID,\n            providerName: DEFAULT_PROVIDER_NAME,\n            modelId: DEFAULT_MODEL_ID,\n        },\n    ];",
       "return [];");
   },
-  "handlers/session.js": source =>
-    'import { nativeMode } from "cindy-modes";\n' + replaceOnce(source,
+  "handlers/session.js": source => {
+    source = 'import { nativeMode } from "cindy-modes";\n' + replaceOnce(source,
       "setConfigOption(server, zcodeSid, params.configId, params.value, params.sessionId)",
-      'setConfigOption(server, zcodeSid, params.configId, params.configId === "mode" ? nativeMode(params.value) : params.value, params.sessionId)'),
-  "backend/credential-store.js": source => replaceOnce(source,
-    'req("@napi-rs/keyring")', 'req("../native/keyring.cjs")'),
+      'setConfigOption(server, zcodeSid, params.configId, params.configId === "mode" ? nativeMode(params.value) : params.value, params.sessionId)');
+    // In remote/guest workspace mode, an older ZCode CLI that rejects toolDenylist must fail closed instead of retrying with local tools enabled.
+    return replaceOnce(source,
+      "function noteToolDenylistRejected(server, method) {",
+      `function noteToolDenylistRejected(server, method) {
+    if (process.env.CINDY_REMOTE_WORKSPACE === "1") {
+        throw new Error(method + ": this ZCode version does not support per-session tool restrictions (toolDenylist) required for remote or shared workspaces");
+    }`);
+  },
+  "backend/credential-store.js": source => {
+    source = replaceOnce(source, 'req("@napi-rs/keyring")', 'req("../native/keyring.cjs")');
+    // Guest sessions isolate ZCODE_HOME while reading the OS keyring entry of the owner's original credentials.json path.
+    return replaceOnce(source,
+      'const account = createHash("sha256").update(path.resolve(file)).digest("hex");',
+      'const account = createHash("sha256").update(path.resolve(process.env.ZCODE_GUEST_ORIGINAL_CREDENTIALS_PATH || file)).digest("hex");');
+  },
+  "config/workflow-gate.js": source => replaceOnce(source,
+    "export function workflowOverrideNow(env = process.env) {",
+    'export function workflowOverrideNow(env = process.env) {\n    if (env.CINDY_REMOTE_WORKSPACE === "1") return { mode: "disabled", enabled: false, source: "override" };'),
+  "config/mcp-discovery.js": source => replaceOnce(source,
+    "export function loadMcpServers() {",
+    'export function loadMcpServers() {\n    if (process.env.CINDY_GUEST_WORKSPACE === "1") return [];'),
+  "config/skill-discovery.js": source => replaceOnce(source,
+    "export function loadSkillCommands() {",
+    'export function loadSkillCommands() {\n    if (process.env.CINDY_GUEST_WORKSPACE === "1") return [];'),
+  "config/plugin-commands.js": source => replaceOnce(source,
+    "export function loadPluginCommands() {",
+    'export function loadPluginCommands() {\n    if (process.env.CINDY_GUEST_WORKSPACE === "1") return [];'),
   // The settings page signs in with `zcode login <family>`. Without the desktop
   // app, the CLI records that OAuth connection on the family's individual
   // coding plan provider in the shared credential store, not in setting.json.

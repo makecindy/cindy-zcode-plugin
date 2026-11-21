@@ -2,11 +2,16 @@
 
 const { spawn } = require('node:child_process');
 const { resolveRuntime, runner } = require('./local-runtime.cjs');
+const remoteWorkspace = require('./remote-workspace.cjs');
 
 const runtime = resolveRuntime();
 if (runtime.reason) {
   console.error(runtime.reason === 'not-installed' ? 'Install ZCode on this computer to run this task.' : 'ZCode requires Node.js 22.13+ with node:sqlite.');
   process.exitCode = 1;
+} else if (remoteWorkspace.isRemoteWorkspaceLaunch(process.argv)) {
+  remoteWorkspace.startRemoteWorkspace(runtime, runner, {
+    guest: remoteWorkspace.isGuestWorkspaceLaunch(process.argv),
+  });
 } else {
   // Cindy supplies a virtual stdin. Stdout goes straight to the host so a
   // final response cannot be lost between child exit and the wrapper exit.

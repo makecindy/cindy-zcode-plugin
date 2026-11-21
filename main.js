@@ -169,6 +169,8 @@
     if (status.version) record.version = status.version;
     if (status.available) {
       record.reportsUsage = true;
+      record.remoteWorkspace = true;
+      record.guestWorkspace = true;
 
       record.models = status.models;
       if (status.modes?.length) {

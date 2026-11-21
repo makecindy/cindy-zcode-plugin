@@ -15,8 +15,8 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const manifest = JSON.parse(await fs.readFile(path.join(root, 'ghost.json'), 'utf8'));
 
-function client(env, directory, entry) {
-  const child = spawn(process.execPath, [path.join(root, entry)], { env, cwd: directory, windowsHide: true });
+function client(env, directory, entry, extraArgs = []) {
+  const child = spawn(process.execPath, [path.join(root, entry), ...extraArgs], { env, cwd: directory, windowsHide: true });
   const pending = new Map();
   const updates = [];
   const permissions = [];
@@ -114,7 +114,9 @@ test('ZCode desktop, Cindy plugin stdio and an isolated model', { skip: !process
     if (!req.url.endsWith('/chat/completions')) { res.writeHead(404); res.end(); return; }
     const request = JSON.parse(body);
     requests++;
-    lastTools = (request.tools || []).map(tool => tool.function?.name);
+    if (Array.isArray(request.tools) && request.tools.length > 0) {
+      lastTools = request.tools.map(tool => tool.function?.name);
+    }
     const reply = 'Reply from the local test model.';
     if (script === 'hold') { onHeld(); return; }
     const writeTool = lastTools.find(name => /^write$/i.test(name));
@@ -201,4 +203,27 @@ test('ZCode desktop, Cindy plugin stdio and an isolated model', { skip: !process
   agent.notify('session/cancel', { sessionId });
   assert.equal((await pending).stopReason, 'cancelled');
   t.diagnostic('A fresh adapter resumed the same session and cancelled an in-flight turn');
+
+  await agent.close();
+  script = 'reply';
+  lastTools = [];
+  agent = client(env, tmp, entry, ['--cindy-remote-workspace', '--cindy-guest-workspace']);
+  await agent.call('initialize', init);
+  const guestSession = await agent.call('session/new', {
+    cwd: workspace,
+    mcpServers: [{ name: 'cindy_exec', type: 'http', url: new URL('/mcp', url).href, headers: [] }],
+  });
+  await agent.call('session/set_config_option', { sessionId: guestSession.sessionId, configId: 'model', value: modelId });
+  assert.equal((await agent.call('session/prompt', {
+    sessionId: guestSession.sessionId,
+    prompt: [{ type: 'text', text: 'Reply in guest mode.' }],
+  })).stopReason, 'end_turn');
+  assert.ok(lastTools.some(name => name && name.includes('cindy_exec') && name.includes('fixture_echo')),
+    'Expected cindy_exec MCP tool in guest mode, got: ' + lastTools.join(', '));
+  for (const forbidden of ['Bash', 'bash', 'Read', 'read', 'Write', 'write', 'Edit', 'edit', 'Glob', 'Grep', 'Skill', 'WebFetch', 'CreateWorkflow', 'mcp__node_repl__js']) {
+    assert.ok(!lastTools.includes(forbidden), `Forbidden local tool ${forbidden} leaked into guest tools: ${lastTools.join(', ')}`);
+  }
+  assert.ok(!lastTools.some(name => name && name.startsWith('mcp__plugin_')),
+    'Bundled ZCode plugin tools leaked into guest tools: ' + lastTools.join(', '));
+  t.diagnostic('Guest-workspace mode exposed cindy_exec MCP tools while stripping all local ZCode tools: ' + lastTools.join(', '));
 });

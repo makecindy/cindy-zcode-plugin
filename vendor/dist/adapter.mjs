@@ -25570,7 +25570,7 @@ function decryptCredential(value, secret) {
   }
 }
 function v2OsKeyForCredentialsFile(file2) {
-  const account = createHash("sha256").update(path4.resolve(file2)).digest("hex");
+  const account = createHash("sha256").update(path4.resolve(process.env.ZCODE_GUEST_ORIGINAL_CREDENTIALS_PATH || file2)).digest("hex");
   let entry = keyringEntryCache.get(account);
   if (entry === void 0) {
     try {
@@ -33395,6 +33395,7 @@ async function resolveWorkflowGate(fetchImpl = globalThis.fetch) {
   }
 }
 function workflowOverrideNow(env = process.env) {
+  if (env.CINDY_REMOTE_WORKSPACE === "1") return { mode: "disabled", enabled: false, source: "override" };
   const mode = loadUserConfig(env).workflow?.mode ?? normalizeWorkflowMode(env[WORKFLOW_MODE_ENV]);
   if (!mode)
     return null;
@@ -40620,6 +40621,7 @@ var init_driver = __esm({
 import { existsSync as existsSync9, readFileSync as readFileSync18, readdirSync as readdirSync4, statSync as statSync6 } from "node:fs";
 import path22 from "node:path";
 function loadMcpServers() {
+  if (process.env.CINDY_GUEST_WORKSPACE === "1") return [];
   const results = [];
   let config2 = null;
   try {
@@ -40782,6 +40784,7 @@ function parseFrontmatter(content) {
   return fm;
 }
 function loadPluginCommands() {
+  if (process.env.CINDY_GUEST_WORKSPACE === "1") return [];
   const cliConfigPath = zcodeCliConfigPath();
   const pluginCacheDir = zcodePluginCacheDir();
   if (!existsSync10(cliConfigPath) || !existsSync10(pluginCacheDir))
@@ -40932,6 +40935,7 @@ function scanSkillDir(dir, disabledPaths, results, seen) {
   }
 }
 function loadSkillCommands() {
+  if (process12.env.CINDY_GUEST_WORKSPACE === "1") return [];
   const results = [];
   const seen = /* @__PURE__ */ new Set();
   let config2 = null;
@@ -41467,6 +41471,9 @@ function rejectsToolDenylistKey(message) {
   return !!message && /unrecognized/i.test(message) && /\btoolDenylist\b/i.test(message);
 }
 function noteToolDenylistRejected(server, method) {
+  if (process13.env.CINDY_REMOTE_WORKSPACE === "1") {
+    throw new Error(method + ": this ZCode version does not support per-session tool restrictions (toolDenylist) required for remote or shared workspaces");
+  }
   if (!server.toolDenylistRejected) {
     warn2(`${method}: backend rejects toolDenylist \u2014 retrying without it; ZCODE_DISALLOWED_TOOLS / the Cron* default are NOT applied on this backend`);
   }
