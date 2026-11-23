@@ -24,7 +24,23 @@ async function quota(origin, key, request) {
   // A refusal here says nothing about the key: on 2026-11-20 BigModel answered
   // a working Coding Plan API key with { code: 401, msg: "令牌已过期或验证不正确" }
   // while the same key ran GLM-5.3 turns.
-  return result.kind === 'success' ? { state: 'active', items: result.items } : { state: 'unknown', items: [] };
+  return result.kind === 'success' ? { state: 'active', items: result.items, level: result.level } : { state: 'unknown', items: [] };
+}
+
+// Window lengths by the quota service's convention (upstream quota/parse.js:
+// TOKENS_LIMIT number 5 is the 5-hour window, 7 the weekly one). Cindy uses
+// them to prefer the account whose quota renews soonest.
+const windowMinutes = { token_5h: 300, token_week: 7 * 24 * 60 };
+
+// The tool quota (web search, reader and vision MCP calls) limits no model:
+// an exhausted one must not keep Cindy from running tasks on the account.
+function windowScope(item) {
+  return item.key === 'mcp' ? { models: [] } : windowMinutes[item.key] ? { windowMinutes: windowMinutes[item.key] } : {};
+}
+
+// The plan tier the quota service names (e.g. "pro"), for display only.
+function planLevel(value) {
+  return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9 _-]{0,23}$/.test(value.trim()) ? value.trim() : undefined;
 }
 
 // state: 'active' (quota returned), 'none' (the service says there is no plan),
@@ -41,13 +57,16 @@ async function codingPlan(family, origin, legacy, request, apiKeys) {
   const platform = family === 'zai' ? 'Z.ai' : 'BigModel';
   const results = await Promise.all(keys.map(entry => quota(origin, entry.key, request).catch(() => ({ state: 'unknown', items: [] }))));
   const state = ['active', 'none', 'unknown'].find(value => results.some(result => result.state === value));
+  const level = results.map(result => planLevel(result.level)).find(Boolean);
   return {
     state,
+    ...(level ? { level } : {}),
     windows: results.flatMap((result, index) => result.items.map(item => ({
       // Several keys of one platform are told apart by their ZCode names.
       label: (keys.length > 1 && keys[index].name ? keys[index].name : platform) + ' · ' + item.label,
       remainingPercent: item.leftPercent,
       ...(item.nextResetTime > 0 ? { resetsAt: item.nextResetTime } : {}),
+      ...windowScope(item),
     }))),
   };
 }
@@ -69,8 +88,9 @@ export async function readCodingPlans(request = fetch) {
     return [family, plan];
   }));
   const plans = Object.fromEntries(entries.map(([family, plan]) => [family, plan.state]));
+  const levels = Object.fromEntries(entries.filter(([, plan]) => plan.level).map(([family, plan]) => [family, plan.level]));
   const windows = entries.flatMap(([, plan]) => plan.windows).filter(shown).slice(0, 24);
-  return { plans, usage: windows.length ? { updatedAt: Date.now(), windows } : null };
+  return { plans, levels, usage: windows.length ? { updatedAt: Date.now(), windows } : null };
 }
 
 export async function readPlanUsage(request = fetch) {

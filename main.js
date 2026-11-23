@@ -164,6 +164,31 @@
     const pair = hints[status.reason] || hints['check-failed'];
     return pair[locale === 'zh' ? 0 : 1];
   }
+  // Ways Cindy can add more ZCode accounts, each kept in a directory of its own
+  // (worker.cjs accountLogin). Browser sign-in needs a standalone CLI: the CLI
+  // inside the desktop app cannot sign in by itself. A Coding Plan API key needs
+  // the installed ZCode's key template. With none, Cindy only shows who the
+  // original login is.
+  const accountMethodLabels = {
+    'bigmodel-browser': ['智谱 BigModel 账号（浏览器登录）', 'BigModel account (browser sign-in)'],
+    'zai-browser': ['Z.ai 账号（浏览器登录）', 'Z.ai account (browser sign-in)'],
+    'bigmodel-key': ['智谱 BigModel Coding Plan API Key', 'BigModel Coding Plan API key'],
+    'zai-key': ['Z.ai Coding Plan API Key', 'Z.ai Coding Plan API key'],
+  };
+  function accountMethods(status) {
+    const label = id => accountMethodLabels[id][locale === 'zh' ? 0 : 1];
+    const methods = [];
+    if (status.signIn === 'cli') {
+      for (const family of ['bigmodel', 'zai']) methods.push({ id: family + '-browser', label: label(family + '-browser'), kind: 'browser' });
+    }
+    const keyFamilies = Array.isArray(status.apiKeyFamilies) ? status.apiKeyFamilies : [];
+    for (const family of ['bigmodel', 'zai']) {
+      if (keyFamilies.includes(family)) {
+        methods.push({ id: family + '-key', label: label(family + '-key'), kind: 'secret', secretLabel: label(family + '-key') });
+      }
+    }
+    return methods;
+  }
   async function publish(status) {
     const record = { id: 'zcode', available: status.available };
     if (status.version) record.version = status.version;
@@ -171,6 +196,7 @@
       record.reportsUsage = true;
       record.remoteWorkspace = true;
       record.guestWorkspace = true;
+      record.accounts = { methods: accountMethods(status) };
 
       record.models = status.models;
       if (status.modes?.length) {
@@ -363,7 +389,8 @@
       const previous = locale;
       useLocale(message.context);
       if (locale !== previous) {
-        if (latest && !latest.status.available) latest.published = await publish(latest.status).catch(() => 'error');
+        // Hints and account method labels follow Cindy's language.
+        if (latest) latest.published = await publish(latest.status).catch(() => 'error');
         channel.postMessage({ type: 'locale-changed' });
       }
     }

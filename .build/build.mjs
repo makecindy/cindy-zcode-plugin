@@ -70,9 +70,15 @@ function loadAllModelsWithStartPlan() {`);
       "return [];");
   },
   "handlers/session.js": source => {
-    source = 'import { nativeMode } from "cindy-modes";\n' + replaceOnce(source,
+    source = 'import { nativeMode } from "cindy-modes";\nimport { withCindyErrorMeta } from "cindy-errors";\n' + replaceOnce(source,
       "setConfigOption(server, zcodeSid, params.configId, params.value, params.sessionId)",
       'setConfigOption(server, zcodeSid, params.configId, params.configId === "mode" ? nativeMode(params.value) : params.value, params.sessionId)');
+    // Cindy engine accounts: a turn that failed because of the account (used-up
+    // Coding Plan window, rejected sign-in or key, busy service) says so in
+    // error.data._meta.cindy, so Cindy can cool that account and switch.
+    source = replaceOnce(source,
+      "return new RequestError(-32603, `ZCode turn failed: ${detail}`, acpTurnFailureData(error.turnError));",
+      "return new RequestError(-32603, `ZCode turn failed: ${detail}`, withCindyErrorMeta(acpTurnFailureData(error.turnError), error.turnError));");
     // In remote/guest workspace mode, an older ZCode CLI that rejects toolDenylist must fail closed instead of retrying with local tools enabled.
     return replaceOnce(source,
       "function noteToolDenylistRejected(server, method) {",
@@ -129,7 +135,7 @@ const upstream = path.join(modules, "zcode-acp-server");
 const output = await build({
   absWorkingDir: here, entryPoints: ["adapter.mjs"], outfile: path.join(dist, "adapter.mjs"),
   bundle: true, format: "esm", platform: "node", target: "node22", metafile: true,
-  alias: { "cindy-modes": path.join(here, "modes.mjs"), "cindy-templates": path.join(here, "templates.mjs") },
+  alias: { "cindy-modes": path.join(here, "modes.mjs"), "cindy-templates": path.join(here, "templates.mjs"), "cindy-errors": path.join(here, "errors.mjs") },
   // Some CommonJS dependencies require Node built-ins from the ESM bundle.
   banner: { js: 'import { createRequire as cindyCreateRequire } from "node:module"; const require = cindyCreateRequire(import.meta.url);' },
   external: ["bufferutil", "utf-8-validate"],

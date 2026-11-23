@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { test } from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import readline from 'node:readline';
+import { fileURLToPath } from 'node:url';
 
 // ZCode 3.18.2 saves a "BigModel Coding Plan" API key added in its model
 // settings as a provider that names a template and holds only the key. The
@@ -78,7 +80,7 @@ test('a template API key provider lists the template models and is read once per
   const quotaUrl = 'https://open.bigmodel.cn/api/monitor/usage/quota/limit';
   assert.deepEqual(result.calls.sort(), [[quotaUrl, 'key-a'], [quotaUrl, 'key-b']]);
   assert.deepEqual(result.plans, { bigmodel: 'active', zai: 'absent' });
-  assert.deepEqual(result.usage.windows, [{ label: 'BigModel Coding Plan 3 · 5h', remainingPercent: 60, resetsAt: 1893456000000 }]);
+  assert.deepEqual(result.usage.windows, [{ label: 'BigModel Coding Plan 3 · 5h', remainingPercent: 60, resetsAt: 1893456000000, windowMinutes: 300 }]);
 });
 
 test('a quota refusal leaves the plan unknown, not the key invalid', async t => {
@@ -88,4 +90,111 @@ test('a quota refusal leaves the plan unknown, not the key invalid', async t => 
   assert.deepEqual(result.account, { signedIn: false, apiKeys: ['bigmodel'] });
   assert.deepEqual(result.plans, { bigmodel: 'unknown', zai: 'absent' });
   assert.equal(result.usage, null);
+});
+
+// Cindy engine accounts: a Coding Plan API key typed into Cindy becomes an
+// account of its own. Through the worker's JSON-RPC, with a stand-in ZCode
+// install, temporary homes and a closed local proxy (no quota service is asked).
+test('an API key login writes the key only into the account directory', async t => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'zcode-api-key-account-'));
+  const home = path.join(tmp, 'home');
+  const cli = path.join(tmp, 'zcode', 'zcode.cjs');
+  await fs.mkdir(path.join(tmp, 'zcode', 'provider'), { recursive: true });
+  await fs.writeFile(cli, '');
+  const zaiTemplate = { templateId: 'zai-api', providerName: 'Z.ai Coding Plan', config: {
+    access: { type: 'zhipu-coding-plan-api-key' },
+    api: { type: 'anthropic-messages', baseUrl: 'https://api.z.ai/api/anthropic' },
+    builtinModelIds: ['GLM-5.3'],
+  } };
+  // The platform's Coding Plan as the installed table names it: a key saved
+  // with its address also entitles these models, the ids a sign-in lists.
+  const plan = { providerId: 'account:bigmodel-individual-coding-plan', providerName: 'BigModel Coding Plan', config: {
+    access: { type: 'zhipu-account', accountType: 'bigmodel', mode: 'individual-coding-plan' },
+    api: { type: 'anthropic-messages', baseUrl: 'https://open.bigmodel.cn/api/anthropic' }, builtinModelIds: ['GLM-5.3'],
+  } };
+  await fs.writeFile(path.join(tmp, 'zcode', 'provider', 'zcode-builtin.json'), JSON.stringify({ schemaVersion: 1, revision: 1, config: {
+    providerConfigRules: { templateRules: [template, zaiTemplate], providerRules: [plan] },
+    modelConfigRules: { templateModelRules: [{ modelId: 'GLM-5-Turbo', templateId: 'bigmodel-api', config: { enabled: false } }] },
+  } }));
+  // The original login keeps its own key; it must stay byte for byte.
+  await fs.mkdir(path.join(home, '.zcode', 'v2'), { recursive: true });
+  await fs.writeFile(path.join(home, '.zcode', 'v2', 'provider_config.json'), JSON.stringify({ schemaVersion: 1, config: {
+    providerConfigRules: { providerRules: [provider('bigmodel-api', 'BigModel Coding Plan', 'original-key')] },
+  } }));
+  const account = path.join(tmp, 'accounts', 'cindy-key');
+  await fs.mkdir(account, { recursive: true });
+  const snapshot = async () => {
+    const files = {};
+    for (const entry of await fs.readdir(tmp, { recursive: true, withFileTypes: true })) {
+      const file = path.join(entry.parentPath ?? entry.path, entry.name);
+      if (entry.isFile() && !file.startsWith(account + path.sep)) files[path.relative(tmp, file)] = await fs.readFile(file, 'utf8');
+    }
+    return files;
+  };
+  const before = await snapshot();
+
+  const env = { ...process.env, HOME: home, USERPROFILE: home, APPDATA: home, LOCALAPPDATA: home,
+    XDG_CONFIG_HOME: path.join(tmp, 'config'), ZCODE_BIN: cli, ZCODE_NODE: process.execPath,
+    NODE_USE_ENV_PROXY: '1', HTTPS_PROXY: 'http://127.0.0.1:9', HTTP_PROXY: 'http://127.0.0.1:9', NO_PROXY: '' };
+  for (const key of ['ZCODE_HOME', 'ZCODE_DATA_BASE_DIR', 'ZCODE_PROVIDER', 'ZCODE_BUILTIN_PROVIDER_CONFIG_FILE',
+    'ZCODE_PERSONAL_PROVIDER_CONFIG_FILE', 'ZCODE_GUEST_ORIGINAL_CREDENTIALS_PATH']) delete env[key];
+  const worker = spawn(process.execPath, [fileURLToPath(new URL('../worker.cjs', import.meta.url))], {
+    env, cwd: tmp, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
+  });
+  let output = '';
+  worker.stderr.on('data', chunk => { output += chunk; });
+  const exited = new Promise(resolve => worker.on('close', resolve));
+  t.after(async () => {
+    worker.kill();
+    await exited;
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }).catch(() => {});
+  });
+  const replies = new Map();
+  readline.createInterface({ input: worker.stdout }).on('line', line => {
+    output += line + '\n';
+    const message = JSON.parse(line);
+    if (message.id != null) replies.get(message.id)?.(message.result);
+  });
+  let next = 0;
+  const call = (method, params) => new Promise(resolve => {
+    const id = ++next;
+    replies.set(id, resolve);
+    worker.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + '\n');
+  });
+  const saved = () => fs.readFile(path.join(account, '.zcode', 'v2', 'provider_config.json'), 'utf8').then(JSON.parse);
+
+  // Format checks and the original login come first: nothing is written.
+  assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', accountDir: account, methodId: 'bigmodel-key', secret: 'two words' }),
+    { ok: false, error: 'invalid-secret' });
+  assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', methodId: 'bigmodel-key', secret: 'fixture-key-abcd' }),
+    { ok: false, error: 'unsupported' });
+  assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', accountDir: home, methodId: 'bigmodel-key', secret: 'fixture-key-abcd' }),
+    { ok: false, error: 'failed', message: 'The account folder cannot be used.' });
+
+  assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', accountDir: account, methodId: 'bigmodel-key', secret: ' fixture-key-abcd\n' }),
+    { ok: true });
+  assert.deepEqual((await saved()).config.providerConfigRules.providerRules, [{
+    providerId: 'bigmodel-api', templateId: 'bigmodel-api', providerName: 'BigModel Coding Plan',
+    config: { group: 'standard-personal', access: { type: 'zhipu-coding-plan-api-key', apiKey: 'fixture-key-abcd' },
+      api: { baseUrl: 'https://open.bigmodel.cn/api/anthropic' }, personalModelIds: [], modelOrder: [] },
+  }]);
+  const status = await call('accountStatus', { harnessId: 'zcode', accountDir: account });
+  assert.equal(status.state, 'signed-in');
+  assert.deepEqual(status.identity, { detail: 'BigModel API Key ····abcd' });
+  assert.match(status.fingerprint, /^[0-9a-f]{32}$/);
+  assert.deepEqual([...status.models].sort(), [
+    'account:bigmodel-individual-coding-plan\\GLM-5.3', 'bigmodel-api\\GLM-5.3', 'bigmodel-api\\GLM-5.3-Flash',
+  ]);
+
+  // One account is one key: a new key replaces the previous one.
+  assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', accountDir: account, methodId: 'zai-key', secret: 'fixture-key-wxyz' }),
+    { ok: true });
+  const rules = (await saved()).config.providerConfigRules.providerRules;
+  assert.deepEqual(rules.map(rule => [rule.providerId, rule.config.access.apiKey]), [['zai-api', 'fixture-key-wxyz']]);
+  const replaced = await call('accountStatus', { harnessId: 'zcode', accountDir: account });
+  assert.deepEqual(replaced.identity, { detail: 'Z.ai API Key ····wxyz' });
+  assert.notEqual(replaced.fingerprint, status.fingerprint);
+
+  assert.deepEqual(await snapshot(), before);
+  assert.ok(!output.includes('fixture-key-abcd') && !output.includes('fixture-key-wxyz'), 'the key never appears in worker output');
 });

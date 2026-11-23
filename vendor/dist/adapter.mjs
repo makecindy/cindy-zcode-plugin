@@ -314,10 +314,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path33) {
-  if (!path33)
+function getElementAtPath(obj, path34) {
+  if (!path34)
     return obj;
-  return path33.reduce((acc, key) => acc?.[key], obj);
+  return path34.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -576,11 +576,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path33, issues) {
+function prefixIssues(path34, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path33);
+    iss.path.unshift(path34);
     return iss;
   });
 }
@@ -1113,16 +1113,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path33 = []) => {
+  const processError = (error63, path34 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path33, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path34, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path33, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path34, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path33, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path34, ...issue2.path]);
       } else {
-        const fullpath = [...path33, ...issue2.path];
+        const fullpath = [...path34, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -1161,17 +1161,17 @@ function formatError(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path33 = []) => {
+  const processError = (error63, path34 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path33, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path34, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path33, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path34, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path33, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path34, ...issue2.path]);
       } else {
-        const fullpath = [...path33, ...issue2.path];
+        const fullpath = [...path34, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -1210,8 +1210,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path33 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path33) {
+  const path34 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path34) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -9077,8 +9077,8 @@ var capitalizeFirstCharacter, error33;
 var init_lt = __esm({
   "node_modules/zod/v4/locales/lt.js"() {
     init_util();
-    capitalizeFirstCharacter = (text) => {
-      return text.charAt(0).toUpperCase() + text.slice(1);
+    capitalizeFirstCharacter = (text2) => {
+      return text2.charAt(0).toUpperCase() + text2.slice(1);
     };
     error33 = () => {
       const Sizable = {
@@ -19243,13 +19243,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path33 = ref.slice(1).split("/").filter(Boolean);
-  if (path33.length === 0) {
+  const path34 = ref.slice(1).split("/").filter(Boolean);
+  if (path34.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path33[0] === defsKey) {
-    const key = path33[1] === void 0 ? void 0 : decodeJSONPointerSegment(path33[1]);
+  if (path34[0] === defsKey) {
+    const key = path34[1] === void 0 ? void 0 : decodeJSONPointerSegment(path34[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -25599,9 +25599,9 @@ function decryptV2Os(value, key) {
   const colon = rest.indexOf(":");
   if (colon === -1)
     throw new Error("credential_decrypt_malformed");
-  const fingerprint = rest.slice(0, colon);
+  const fingerprint2 = rest.slice(0, colon);
   const expected = createHash("sha256").update(key).digest("hex").slice(0, 24);
-  if (fingerprint !== expected)
+  if (fingerprint2 !== expected)
     throw new Error("credential_decrypt_key_mismatch");
   const parts = rest.slice(colon + 1).split(".");
   if (parts.length !== 3)
@@ -25619,12 +25619,12 @@ function decryptV2Os(value, key) {
   }
 }
 function encryptV2Os(value, key) {
-  const fingerprint = createHash("sha256").update(key).digest("hex").slice(0, 24);
+  const fingerprint2 = createHash("sha256").update(key).digest("hex").slice(0, 24);
   const iv = randomBytes(12);
   const cipher = createCipheriv(CIPHER_ALGORITHM, key, iv);
   const cipherText = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return `${V2_OS_PREFIX}${fingerprint}:${[
+  return `${V2_OS_PREFIX}${fingerprint2}:${[
     iv.toString("base64url"),
     tag.toString("base64url"),
     cipherText.toString("base64url")
@@ -25938,8 +25938,8 @@ function readDesktopAppVersion(dir) {
     if (!existsSync(plist))
       continue;
     try {
-      const text = readFileSync4(plist, "utf8");
-      const match = /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/u.exec(text);
+      const text2 = readFileSync4(plist, "utf8");
+      const match = /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/u.exec(text2);
       const ver = match?.[1]?.trim();
       if (ver)
         return ver;
@@ -26127,8 +26127,8 @@ async function installedAppVersion(appPath, env = process.env, platform3 = updat
     return env.ZCODE_APP_VERSION?.trim() || null;
   const plist = path6.join(appPath, "Contents", "Info.plist");
   try {
-    const text = await readFile(plist, "utf8");
-    const match = /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/u.exec(text);
+    const text2 = await readFile(plist, "utf8");
+    const match = /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/u.exec(text2);
     if (match)
       return match[1].trim();
   } catch {
@@ -26172,13 +26172,13 @@ function parseManifest(raw) {
       return;
     const indents = block.lines.filter((l) => l.trim() !== "").map((l) => leadingSpaces(l));
     const base = indents.length > 0 ? Math.min(...indents) : 0;
-    const text = block.lines.map((l) => l.trim() === "" ? "" : l.slice(base)).join("\n").replace(/\n+$/u, "");
+    const text2 = block.lines.map((l) => l.trim() === "" ? "" : l.slice(base)).join("\n").replace(/\n+$/u, "");
     if (block.target === "root")
-      root[block.key] = text;
+      root[block.key] = text2;
     else if (block.target === "file" && file2)
-      file2[block.key] = text;
+      file2[block.key] = text2;
     else if (block.target === "locale" && locale)
-      locale[block.key] = text;
+      locale[block.key] = text2;
     block = null;
   };
   for (const line of lines) {
@@ -26255,11 +26255,11 @@ function leadingSpaces(line) {
   const match = /^\s*/u.exec(line);
   return match ? match[0].length : 0;
 }
-function assign(target, text) {
-  const colon = text.indexOf(":");
+function assign(target, text2) {
+  const colon = text2.indexOf(":");
   if (colon < 0)
     return;
-  target[text.slice(0, colon).trim()] = unquote(text.slice(colon + 1).trim());
+  target[text2.slice(0, colon).trim()] = unquote(text2.slice(colon + 1).trim());
 }
 function unquote(value) {
   if (value.length >= 2) {
@@ -26302,8 +26302,8 @@ async function fetchReleaseManifest(channel, env = process.env, fetchImpl = mani
   });
   if (!res.ok)
     throw new UpstreamError(`manifest_http_${res.status}`);
-  const text = await res.text();
-  return parseManifest(text);
+  const text2 = await res.text();
+  return parseManifest(text2);
 }
 function currentPlatform(overridden) {
   return overridden ?? updatePlatform;
@@ -27331,7 +27331,9 @@ var init_modes = __esm({
 });
 
 // templates.mjs
-import { readFileSync as readFileSync7 } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import path9 from "node:path";
 function withProviderTemplate(rule, table = readBuiltinTable()?.table) {
   const id = rule?.templateId;
   const template = id ? table?.config?.providerConfigRules?.templateRules?.find((item) => item.templateId === id) : void 0;
@@ -27375,12 +27377,76 @@ function codingPlanApiKeys() {
   }
   return out;
 }
-var origins;
+function codingPlanKeyTemplates(table = readBuiltinTable()?.table) {
+  const out = {};
+  for (const template of table?.config?.providerConfigRules?.templateRules ?? []) {
+    if (!template?.templateId || typeof template.templateId !== "string") continue;
+    if (template.config?.access?.type !== "zhipu-coding-plan-api-key") continue;
+    let family;
+    try {
+      family = origins[new URL(template.config.api?.baseUrl).origin];
+    } catch {
+    }
+    if (family && !out[family]) out[family] = template;
+  }
+  return out;
+}
+function saveCodingPlanKey(family, apiKey, file2 = zcodePersonalProviderPath()) {
+  if (!Object.values(origins).includes(family)) throw new Error("unsupported");
+  const key = typeof apiKey === "string" ? apiKey.trim() : "";
+  if (!keyShape.test(key)) throw new Error("invalid-secret");
+  const table = readBuiltinTable()?.table;
+  const template = codingPlanKeyTemplates(table)[family];
+  if (!template) throw new Error("unsupported");
+  let current = { schemaVersion: 1, config: { providerConfigRules: { providerRules: [] } } };
+  let text2;
+  try {
+    text2 = readFileSync7(file2, "utf8");
+  } catch (error62) {
+    if (error62.code !== "ENOENT") throw error62;
+  }
+  if (text2 !== void 0) {
+    current = JSON.parse(text2);
+    if (!current || typeof current !== "object" || Array.isArray(current)) throw new Error("Unreadable provider file");
+  }
+  const config2 = current.config && typeof current.config === "object" ? current.config : {};
+  const rulesHolder = config2.providerConfigRules && typeof config2.providerConfigRules === "object" ? config2.providerConfigRules : {};
+  const rules = (Array.isArray(rulesHolder.providerRules) ? rulesHolder.providerRules : []).filter((rule) => withProviderTemplate(rule, table)?.config?.access?.type !== "zhipu-coding-plan-api-key");
+  rules.push({
+    providerId: template.templateId,
+    templateId: template.templateId,
+    providerName: printableName(template.providerName) ?? (family === "zai" ? "Z.ai Coding Plan" : "BigModel Coding Plan"),
+    config: {
+      group: "standard-personal",
+      access: { type: "zhipu-coding-plan-api-key", apiKey: key },
+      api: { baseUrl: template.config.api.baseUrl },
+      personalModelIds: [],
+      modelOrder: []
+    }
+  });
+  const next = { ...current, config: { ...config2, providerConfigRules: { ...rulesHolder, providerRules: rules } } };
+  mkdirSync2(path9.dirname(file2), { recursive: true, mode: 448 });
+  const temporary = `${file2}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, JSON.stringify(next, null, 2) + "\n", { flag: "wx", mode: 384 });
+    renameSync(temporary, file2);
+  } finally {
+    try {
+      unlinkSync(temporary);
+    } catch {
+    }
+  }
+}
+function printableName(value) {
+  return typeof value === "string" && value.trim() && value.length <= 80 && !/[\u0000-\u001f\u007f]/.test(value) ? value.trim() : void 0;
+}
+var origins, keyShape;
 var init_templates = __esm({
   "templates.mjs"() {
     init_account_provider();
     init_utils();
     origins = { "https://open.bigmodel.cn": "bigmodel", "https://api.z.ai": "zai" };
+    keyShape = /^[!-~]{1,4096}$/;
   }
 });
 
@@ -27435,11 +27501,11 @@ var init_adapter = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/lazy-sessions.js
-import { existsSync as existsSync4, mkdirSync as mkdirSync2, readFileSync as readFileSync8, readdirSync as readdirSync2, renameSync, statSync as statSync3, unlinkSync, writeFileSync } from "node:fs";
-import path9 from "node:path";
+import { existsSync as existsSync4, mkdirSync as mkdirSync3, readFileSync as readFileSync8, readdirSync as readdirSync2, renameSync as renameSync2, statSync as statSync3, unlinkSync as unlinkSync2, writeFileSync as writeFileSync2 } from "node:fs";
+import path10 from "node:path";
 import process5 from "node:process";
 function storePath() {
-  return path9.join(zcodeHomeDir2(), "v2", STORE_FILENAME);
+  return path10.join(zcodeHomeDir2(), "v2", STORE_FILENAME);
 }
 function readTable() {
   try {
@@ -27468,11 +27534,11 @@ function readTable() {
 function persist(table) {
   try {
     const p = storePath();
-    const dir = path9.dirname(p);
-    mkdirSync2(dir, { recursive: true });
+    const dir = path10.dirname(p);
+    mkdirSync3(dir, { recursive: true });
     const tmp = `${p}.tmp-${process5.pid}`;
-    writeFileSync(tmp, JSON.stringify(table, null, 2));
-    renameSync(tmp, p);
+    writeFileSync2(tmp, JSON.stringify(table, null, 2));
+    renameSync2(tmp, p);
     sweepStaleTmp(dir, p);
   } catch (e) {
     warn2(`lazy-sessions: store write failed (${e instanceof Error ? e.message : String(e)})`);
@@ -27480,15 +27546,15 @@ function persist(table) {
 }
 function sweepStaleTmp(dir, storeFile) {
   try {
-    const prefix = `${path9.basename(storeFile)}.tmp-`;
+    const prefix = `${path10.basename(storeFile)}.tmp-`;
     const cutoff = Date.now() - TMP_MAX_AGE_MS;
     for (const entry of readdirSync2(dir)) {
       if (!entry.startsWith(prefix))
         continue;
-      const full = path9.join(dir, entry);
+      const full = path10.join(dir, entry);
       try {
         if (statSync3(full).mtimeMs < cutoff)
-          unlinkSync(full);
+          unlinkSync2(full);
       } catch {
       }
     }
@@ -27577,7 +27643,7 @@ var init_lazy_sessions = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/handlers/io.js
-import { randomUUID } from "node:crypto";
+import { randomUUID as randomUUID2 } from "node:crypto";
 function sendSessionUpdate(cx, sessionId, update) {
   return enqueueSessionSend(sessionId, () => cx.notify("session/update", { sessionId, update }));
 }
@@ -27612,25 +27678,25 @@ async function withReplayBatch(sessionId, fn) {
     }
   }
 }
-function sendTextChunk(cx, sessionId, text, messageId) {
+function sendTextChunk(cx, sessionId, text2, messageId) {
   return sendSessionUpdate(cx, sessionId, {
     sessionUpdate: "agent_message_chunk",
-    content: { type: "text", text },
+    content: { type: "text", text: text2 },
     messageId
   });
 }
 function echoUserPromptToOthers(server, prompter, params) {
   const blocks = Array.isArray(params.prompt) ? params.prompt : [{ type: "text", text: params.prompt }];
-  const text = blocks.map((b) => typeof b === "object" && b.type === "text" ? b.text ?? "" : "").filter((t) => t.length > 0).join("\n").trim();
-  if (!text)
+  const text2 = blocks.map((b) => typeof b === "object" && b.type === "text" ? b.text ?? "" : "").filter((t) => t.length > 0).join("\n").trim();
+  if (!text2)
     return;
-  const messageId = `uprompt_${randomUUID()}`;
+  const messageId = `uprompt_${randomUUID2()}`;
   void enqueueSessionSend(params.sessionId, async () => {
     const results = await Promise.allSettled(server.sessionAliases(params.sessionId).map((sid) => server.clients.notifyOthers(prompter, "session/update", {
       sessionId: sid,
       update: {
         sessionUpdate: "user_message_chunk",
-        content: { type: "text", text },
+        content: { type: "text", text: text2 },
         messageId
       }
     })));
@@ -27646,11 +27712,11 @@ function echoSteeredInputs(server, sessionId, payload) {
   if (!Array.isArray(drained) || drained.length === 0)
     return;
   const inputs = drained.flatMap((d) => {
-    const text = typeof d?.text === "string" ? d.text : "";
-    if (text.trim().length === 0)
+    const text2 = typeof d?.text === "string" ? d.text : "";
+    if (text2.trim().length === 0)
       return [];
-    const messageId = typeof d?.messageId === "string" && d.messageId.length > 0 ? `steer_${d.messageId}` : `steer_${randomUUID()}`;
-    return [{ text, messageId }];
+    const messageId = typeof d?.messageId === "string" && d.messageId.length > 0 ? `steer_${d.messageId}` : `steer_${randomUUID2()}`;
+    return [{ text: text2, messageId }];
   });
   if (inputs.length === 0)
     return;
@@ -28929,13 +28995,13 @@ async function fetchQuotaResponse(fetchImpl = globalThis.fetch) {
     },
     signal: AbortSignal.timeout(TIMEOUT_MS)
   });
-  const text = await resp.text();
+  const text2 = await resp.text();
   let json2 = null;
   try {
-    json2 = text ? JSON.parse(text) : null;
+    json2 = text2 ? JSON.parse(text2) : null;
   } catch {
   }
-  return { status: resp.status, json: json2, text };
+  return { status: resp.status, json: json2, text: text2 };
 }
 var QUOTA_PATH, TIMEOUT_MS, HOST_CN, HOST_INTL;
 var init_client = __esm({
@@ -29251,9 +29317,9 @@ var init_wecom = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/push/push.js
-import path10 from "node:path";
+import path11 from "node:path";
 function pushSourceLabel(server, acpSid) {
-  const project = path10.basename(server.projectCwd?.() ?? process.cwd());
+  const project = path11.basename(server.projectCwd?.() ?? process.cwd());
   const title = acpSid !== void 0 ? server.sessionTitles?.get(acpSid) : void 0;
   return title ? `${project} / ${title}` : project;
 }
@@ -29753,8 +29819,8 @@ var init_atomic_write = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/quota/thresholds.js
-import { mkdirSync as mkdirSync3, renameSync as renameSync2, writeFileSync as writeFileSync2 } from "node:fs";
-import path11 from "node:path";
+import { mkdirSync as mkdirSync4, renameSync as renameSync3, writeFileSync as writeFileSync3 } from "node:fs";
+import path12 from "node:path";
 function windowName(item) {
   return item.key === "token_week" ? "weekly" : item.label.toLowerCase();
 }
@@ -29766,7 +29832,7 @@ function quotaTier(usedPercent) {
   return tier;
 }
 function statePath() {
-  return path11.join(path11.dirname(userConfigPath()), "quota-push-state.json");
+  return path12.join(path12.dirname(userConfigPath()), "quota-push-state.json");
 }
 async function loadState() {
   const map2 = /* @__PURE__ */ new Map();
@@ -29788,11 +29854,11 @@ async function loadState() {
 function persist2(map2) {
   try {
     const p = statePath();
-    mkdirSync3(path11.dirname(p), { recursive: true });
+    mkdirSync4(path12.dirname(p), { recursive: true });
     const tmp = `${p}.tmp-${process.pid}`;
-    writeFileSync2(tmp, `${JSON.stringify({ items: Object.fromEntries(map2) }, null, 2)}
+    writeFileSync3(tmp, `${JSON.stringify({ items: Object.fromEntries(map2) }, null, 2)}
 `, "utf8");
-    renameSync2(tmp, p);
+    renameSync3(tmp, p);
     return true;
   } catch (e) {
     warn2(`quota-thresholds: state persist failed (${e instanceof Error ? e.message : String(e)})`);
@@ -29936,8 +30002,8 @@ async function fetchOcUsage(apiKey, fetchImpl = globalThis.fetch) {
     },
     signal: AbortSignal.timeout(TIMEOUT_MS2)
   });
-  const text = await resp.text();
-  return { status: resp.status, text };
+  const text2 = await resp.text();
+  return { status: resp.status, text: text2 };
 }
 async function fetchOcMe(apiKey, fetchImpl = globalThis.fetch) {
   const resp = await fetchImpl(ME_URL, {
@@ -29950,8 +30016,8 @@ async function fetchOcMe(apiKey, fetchImpl = globalThis.fetch) {
     body: "{}",
     signal: AbortSignal.timeout(TIMEOUT_MS2)
   });
-  const text = await resp.text();
-  return { status: resp.status, text };
+  const text2 = await resp.text();
+  return { status: resp.status, text: text2 };
 }
 var TIMEOUT_MS2, USAGE_URL, USAGE_RANGE, ME_URL;
 var init_client2 = __esm({
@@ -30228,7 +30294,7 @@ var init_cache3 = __esm({
 
 // node_modules/zcode-acp-server/dist/quota/opencode-go/config.js
 import { readFileSync as readFileSync10 } from "node:fs";
-import path12 from "node:path";
+import path13 from "node:path";
 import process8 from "node:process";
 function readConfigFile(filePath = CONFIG_PATH) {
   try {
@@ -30260,7 +30326,7 @@ var init_config4 = __esm({
     ENV_AUTH_COOKIE = "OPENCODE_GO_AUTH_COOKIE";
     ENV_SESSION_TOKEN = "OPENCODE_GO_SESSION_TOKEN";
     ENV_API_KEY2 = "OPENCODE_GO_API_KEY";
-    CONFIG_PATH = path12.join(process8.env.HOME || process8.env.USERPROFILE || "~", ".pi", "agent", "opencode-go.json");
+    CONFIG_PATH = path13.join(process8.env.HOME || process8.env.USERPROFILE || "~", ".pi", "agent", "opencode-go.json");
   }
 });
 
@@ -30283,8 +30349,8 @@ async function fetchGoStatus(workspaceId, authCookie, sessionToken, fetchImpl = 
     redirect: "follow",
     signal: AbortSignal.timeout(TIMEOUT_MS3)
   });
-  const text = await resp.text();
-  return { status: resp.status, text };
+  const text2 = await resp.text();
+  return { status: resp.status, text: text2 };
 }
 async function fetchZenUsage(apiKey, fetchImpl = globalThis.fetch) {
   const resp = await fetchImpl(zenUsageUrl(), {
@@ -30296,8 +30362,8 @@ async function fetchZenUsage(apiKey, fetchImpl = globalThis.fetch) {
     },
     signal: AbortSignal.timeout(TIMEOUT_MS3)
   });
-  const text = await resp.text();
-  return { status: resp.status, text };
+  const text2 = await resp.text();
+  return { status: resp.status, text: text2 };
 }
 var TIMEOUT_MS3, USER_AGENT;
 var init_client3 = __esm({
@@ -30325,10 +30391,10 @@ function windowFrom(meter, fallbackResetAt, now4) {
   const resetInSec = Number.isFinite(at) ? Math.max(0, Math.round((at - now4) / 1e3)) : 0;
   return { usagePercent, resetInSec };
 }
-function parseGoStatus(text, now4 = Date.now()) {
+function parseGoStatus(text2, now4 = Date.now()) {
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(text2);
   } catch {
     return { rolling: null, weekly: null, monthly: null, parserOutdated: false };
   }
@@ -30351,10 +30417,10 @@ function looksLikeZenUsage(parsed) {
   const usage = parsed?.usage;
   return typeof usage === "object" && usage !== null;
 }
-function parseZenUsage(text, now4 = Date.now()) {
+function parseZenUsage(text2, now4 = Date.now()) {
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(text2);
   } catch {
     return { rolling: null, weekly: null, monthly: null, parserOutdated: false };
   }
@@ -30505,7 +30571,7 @@ var init_opencode_go = __esm({
 
 // node_modules/zcode-acp-server/dist/quota/startplan.js
 import { readFileSync as readFileSync11 } from "node:fs";
-import path13 from "node:path";
+import path14 from "node:path";
 function apiOrigin2(env) {
   return env.ZCODE_ENDPOINT_ORIGIN ?? env.ZCODE_BASE_URL ?? "https://zcode.z.ai";
 }
@@ -30513,7 +30579,7 @@ function readZcodeAccountAuth() {
   const jwt2 = storeStartPlanJwt();
   let deviceMid;
   try {
-    const stateFile = path13.join(zcodeHomeDir2(), "v2", "telemetry-state.json");
+    const stateFile = path14.join(zcodeHomeDir2(), "v2", "telemetry-state.json");
     const parsed = JSON.parse(readFileSync11(stateFile, "utf8"));
     if (typeof parsed.deviceMid === "string") {
       const candidate = parsed.deviceMid.trim();
@@ -30584,10 +30650,10 @@ async function fetchStartPlanBalance(auth, fetchImpl = globalThis.fetch, env = p
   if (resp.status === 429) {
     throw new StartPlanStatusError("rate_limited", resp.status);
   }
-  const text = await resp.text();
+  const text2 = await resp.text();
   let json2 = null;
   try {
-    json2 = text ? JSON.parse(text) : null;
+    json2 = text2 ? JSON.parse(text2) : null;
   } catch {
   }
   if (json2 === null) {
@@ -30659,7 +30725,7 @@ var init_startplan = __esm({
 
 // node_modules/zcode-acp-server/dist/i18n.js
 import { readFileSync as readFileSync12 } from "node:fs";
-import path14 from "node:path";
+import path15 from "node:path";
 function resolveLanguage(env = process.env) {
   const pick2 = (value) => {
     if (typeof value !== "string")
@@ -30678,7 +30744,7 @@ function appLocale() {
     appLocaleRead = true;
     let locale;
     try {
-      const raw = readFileSync12(path14.join(zcodeHomeDir2(), "v2", "setting.json"), "utf8");
+      const raw = readFileSync12(path15.join(zcodeHomeDir2(), "v2", "setting.json"), "utf8");
       const bomless = raw.charCodeAt(0) === 65279 ? raw.slice(1) : raw;
       const parsed = JSON.parse(bomless);
       const pref = typeof parsed.localePreference === "string" ? parsed.localePreference : void 0;
@@ -30987,8 +31053,209 @@ ${files.join("\n")}`,
   }
 });
 
+// node_modules/zcode-acp-server/dist/quota/resume.js
+function asRec(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : void 0;
+}
+function finiteNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value))
+    return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : void 0;
+  }
+  return void 0;
+}
+function isQuotaStopFailureMessage(message) {
+  if (typeof message !== "string" || message === "")
+    return false;
+  if (QUOTA_CODE_BRACKET.test(message))
+    return true;
+  return message.includes("rate_limited") && QUOTA_MESSAGE_HINT.test(message);
+}
+function classifyQuotaExhaustion(error62) {
+  const root = asRec(error62);
+  if (!root)
+    return void 0;
+  const nodes = [];
+  const visit2 = (value, depth) => {
+    const rec = asRec(value);
+    if (!rec || depth > 3)
+      return;
+    nodes.push(rec);
+    visit2(rec["data"], depth + 1);
+    visit2(rec["cause"], depth + 1);
+    visit2(rec["context"], depth + 1);
+  };
+  visit2(error62, 0);
+  for (const node2 of nodes) {
+    const stop = asRec(node2["providerStop"]);
+    if (!stop)
+      continue;
+    if (stop["kind"] !== "quota")
+      return void 0;
+    const info = infoFromStop(stop);
+    return info;
+  }
+  const providerCode = firstString(nodes, ["providerCode"]) ?? firstCodeInQuotaSet(nodes) ?? void 0;
+  const resetAt = resetAtFromNodes(nodes);
+  if (providerCode !== void 0 && QUOTA_PROVIDER_CODES.has(providerCode)) {
+    return { providerCode, ...resetAt === void 0 ? {} : { resetAt } };
+  }
+  const reason = firstString(nodes, ["reason"]) ?? "";
+  const retryable = firstBool(nodes, ["retryable"]);
+  const message = firstString(nodes, ["message", "detail"]) ?? "";
+  if ((reason === "rate_limited" || reason === "invalid_request") && retryable !== true && QUOTA_MESSAGE_HINT.test(message)) {
+    return { ...resetAt === void 0 ? {} : { resetAt } };
+  }
+  return void 0;
+}
+function infoFromStop(stop) {
+  const providerCode = typeof stop["providerCode"] === "string" && stop["providerCode"] ? stop["providerCode"] : void 0;
+  const resetAt = finiteNumber(stop["resetAt"]);
+  return {
+    ...providerCode === void 0 ? {} : { providerCode },
+    ...resetAt === void 0 || resetAt <= Date.now() ? {} : { resetAt }
+  };
+}
+function firstString(nodes, keys) {
+  for (const node2 of nodes) {
+    for (const key of keys) {
+      const v = node2[key];
+      if (typeof v === "string" && v !== "")
+        return v;
+    }
+  }
+  return void 0;
+}
+function firstBool(nodes, keys) {
+  for (const node2 of nodes) {
+    for (const key of keys) {
+      const v = node2[key];
+      if (typeof v === "boolean")
+        return v;
+    }
+  }
+  return void 0;
+}
+function firstCodeInQuotaSet(nodes) {
+  for (const node2 of nodes) {
+    const code = node2["code"];
+    if (typeof code === "string" && QUOTA_PROVIDER_CODES.has(code))
+      return code;
+  }
+  return void 0;
+}
+function resetAtFromNodes(nodes) {
+  for (const node2 of nodes) {
+    const direct = finiteNumber(node2["resetAt"]);
+    if (direct !== void 0 && direct > Date.now())
+      return direct;
+  }
+  for (const node2 of nodes) {
+    const ms = finiteNumber(node2["retryAfterMs"]);
+    if (ms !== void 0 && ms > 0)
+      return Date.now() + ms;
+    const seconds = finiteNumber(node2["retryAfterSeconds"]);
+    if (seconds !== void 0 && seconds > 0)
+      return Date.now() + seconds * 1e3;
+  }
+  return void 0;
+}
+function quotaResetAtFromResult(result, now4 = Date.now()) {
+  if (result.kind !== "success")
+    return void 0;
+  let best;
+  for (const item of result.items) {
+    if (item.usedPercent < QUOTA_EXHAUSTED_PERCENT)
+      continue;
+    const reset = item.nextResetTime;
+    if (typeof reset !== "number" || !Number.isFinite(reset) || reset <= now4)
+      continue;
+    if (best === void 0 || reset < best)
+      best = reset;
+  }
+  return best;
+}
+function quotaBackoffMs(attempt, baseMs = 5 * 6e4, capMs = 2 * 60 * 6e4) {
+  const raw = baseMs * 2 ** Math.max(0, attempt - 1);
+  return Math.min(raw, capMs);
+}
+var QUOTA_PROVIDER_CODES, QUOTA_EXHAUSTED_PERCENT, QUOTA_MESSAGE_HINT, QUOTA_CODE_BRACKET;
+var init_resume = __esm({
+  "node_modules/zcode-acp-server/dist/quota/resume.js"() {
+    QUOTA_PROVIDER_CODES = /* @__PURE__ */ new Set([
+      "1005",
+      "1308",
+      "1310",
+      "1313",
+      "1316",
+      "1317",
+      "1318",
+      "1319",
+      "1320",
+      "1321",
+      "2056",
+      "20097",
+      "insufficient_quota",
+      "credit_balance_exhausted",
+      "organization_spend_limit_exceeded",
+      "project_spend_limit_exceeded",
+      "organization_usage_limit_exceeded",
+      "exceeded_current_quota_error"
+    ]);
+    QUOTA_EXHAUSTED_PERCENT = 98;
+    QUOTA_MESSAGE_HINT = /quota|usage cap|额度|配额|余额|balance|credit/i;
+    QUOTA_CODE_BRACKET = /\[(1005|1308|1310|1313|1316|1317|1318|1319|1320|1321|2056|20097|insufficient_quota|credit_balance_exhausted|organization_spend_limit_exceeded|project_spend_limit_exceeded|organization_usage_limit_exceeded|exceeded_current_quota_error)\]/;
+  }
+});
+
+// errors.mjs
+function text(value) {
+  return typeof value === "string" ? value.trim().toLowerCase() : typeof value === "number" ? String(value) : "";
+}
+function classifyAccountError(data, turnError) {
+  const record2 = data && typeof data === "object" ? data : {};
+  const provider = text(record2.providerCode);
+  const code = text(record2.code);
+  const reason = text(record2.reason);
+  const status = typeof record2.statusCode === "number" ? record2.statusCode : void 0;
+  const quota2 = (turnError && typeof turnError === "object" ? classifyQuotaExhaustion(turnError) : void 0) ?? classifyQuotaExhaustion(record2);
+  if (quota2 || USAGE_CODES.has(provider)) {
+    const reset = quota2?.resetAt;
+    return {
+      kind: "usage-limit",
+      ...typeof reset === "number" && Number.isFinite(reset) && reset > Date.now() ? { resetsAt: Math.round(reset) } : {}
+    };
+  }
+  if (status === 401 || AUTH_CODES.has(provider) || AUTH_WORDS.test(code) || AUTH_WORDS.test(reason)) {
+    return { kind: "auth-required" };
+  }
+  if (status === 429 || status === 503 || status === 529 || BUSY_CODES.has(provider) || BUSY_WORDS.test(code) || BUSY_WORDS.test(reason) || reason === "rate_limited") {
+    return { kind: "overloaded" };
+  }
+  return null;
+}
+function withCindyErrorMeta(data, turnError) {
+  const cindy = classifyAccountError(data, turnError);
+  if (!cindy) return data;
+  const meta3 = data && typeof data._meta === "object" && data._meta !== null ? data._meta : {};
+  return { ...data, _meta: { ...meta3, cindy } };
+}
+var USAGE_CODES, AUTH_CODES, BUSY_CODES, AUTH_WORDS, BUSY_WORDS;
+var init_errors4 = __esm({
+  "errors.mjs"() {
+    init_resume();
+    USAGE_CODES = /* @__PURE__ */ new Set(["1113", "1304", "1309"]);
+    AUTH_CODES = /* @__PURE__ */ new Set(["1000", "1001", "1002", "1003", "1004"]);
+    BUSY_CODES = /* @__PURE__ */ new Set(["1302", "1303", "1305"]);
+    AUTH_WORDS = /^(?:model_)?(?:auth(?:entication)?(?:_error|_failed|_required)?|unauthori[sz]ed|invalid_api_key|api_key_invalid)$/;
+    BUSY_WORDS = /^(?:model_)?(?:overloaded(?:_error)?|server_overloaded|service_unavailable)$/;
+  }
+});
+
 // node_modules/zcode-acp-server/dist/handlers/prompt-content.js
-import { randomUUID as randomUUID2 } from "node:crypto";
+import { randomUUID as randomUUID3 } from "node:crypto";
 import { chmod as chmod2, lstat, mkdir as mkdir4, unlink, writeFile as writeFile3 } from "node:fs/promises";
 import { basename as basename2, join as join3 } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31021,7 +31288,7 @@ function filename(uri, fallback) {
 async function convertPromptContent(blocks, stagingDir) {
   if (!Array.isArray(blocks) || blocks.length > PROMPT_LIMITS.blocks)
     invalid("Too many prompt blocks");
-  const text = [], attachments = [], created = [];
+  const text2 = [], attachments = [], created = [];
   let total = 0;
   const charge = (bytes, type = "text/plain") => {
     if (type.startsWith("image/") && bytes > PROMPT_LIMITS.image)
@@ -31053,7 +31320,7 @@ async function convertPromptContent(blocks, stagingDir) {
           throw error62;
         invalid("Attachment staging directory is unavailable");
       }
-      const localPath = join3(stagingDir, `${randomUUID2()}-${basename2(name).replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "attachment"}`);
+      const localPath = join3(stagingDir, `${randomUUID3()}-${basename2(name).replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "attachment"}`);
       await writeFile3(localPath, bytes, { flag: "wx", mode: 384 });
       created.push(localPath);
       attachments.push({
@@ -31069,7 +31336,7 @@ async function convertPromptContent(blocks, stagingDir) {
     for (const block of blocks) {
       if (block.type === "text") {
         charge(Buffer.byteLength(block.text));
-        text.push(block.text);
+        text2.push(block.text);
       } else if (block.type === "image") {
         const type = mime(block.mimeType);
         if (!type.startsWith("image/"))
@@ -31091,7 +31358,7 @@ async function convertPromptContent(blocks, stagingDir) {
           const line = `[embedded resource: ${r.uri}]
 ${r.text}`;
           charge(Buffer.byteLength(line));
-          text.push(line);
+          text2.push(line);
         } else
           await binary(r.blob, type, filename(r.uri, "resource"));
       } else if (block.type === "resource_link") {
@@ -31104,11 +31371,11 @@ ${r.text}`;
         }
         const reference = `[related resource: ${block.name || location}](${location})`;
         charge(Buffer.byteLength(reference));
-        text.push(reference);
+        text2.push(reference);
       } else
         invalid("Unsupported prompt content type; audio transcription is not implemented");
     }
-    let content = text.join("\n").trim();
+    let content = text2.join("\n").trim();
     if (blocks.some((block) => block.type !== "text") && content.startsWith("/")) {
       content = `[attached context]
 ${content}`;
@@ -31315,15 +31582,15 @@ var init_listener = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/backend/sandbox.js
-import { existsSync as existsSync5, mkdirSync as mkdirSync4, mkdtempSync, readFileSync as readFileSync13, readdirSync as readdirSync3, realpathSync, renameSync as renameSync3, rmSync, statSync as statSync4, writeFileSync as writeFileSync3 } from "node:fs";
+import { existsSync as existsSync5, mkdirSync as mkdirSync5, mkdtempSync, readFileSync as readFileSync13, readdirSync as readdirSync3, realpathSync, renameSync as renameSync4, rmSync, statSync as statSync4, writeFileSync as writeFileSync4 } from "node:fs";
 import os3 from "node:os";
-import path15 from "node:path";
+import path16 from "node:path";
 import process9 from "node:process";
 function globalSandboxConfigPath() {
-  return path15.join(path15.dirname(userConfigPath()), "sandbox.json");
+  return path16.join(path16.dirname(userConfigPath()), "sandbox.json");
 }
 function globalSandboxConfigDir() {
-  return resolveReal(path15.dirname(userConfigPath()));
+  return resolveReal(path16.dirname(userConfigPath()));
 }
 function sanitizePathList(raw, file2, issueKey) {
   if (!Array.isArray(raw))
@@ -31345,15 +31612,15 @@ function sanitizeGlobalSandboxConfig(parsed) {
 }
 function readGlobalSandboxConfig() {
   const file2 = globalSandboxConfigPath();
-  let text;
+  let text2;
   try {
-    text = readFileSync13(file2, "utf8");
+    text2 = readFileSync13(file2, "utf8");
   } catch {
     return { allow: [], deny: [], strictGit: false };
   }
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(text2);
   } catch {
     if (!warnedGlobalIssues.has(`${file2}:malformed`)) {
       warnedGlobalIssues.add(`${file2}:malformed`);
@@ -31404,10 +31671,10 @@ function persistGlobalSandboxConfig(mutate) {
   }
   const next = mutate(cfg);
   try {
-    mkdirSync4(path15.dirname(file2), { recursive: true });
-    const tmp = path15.join(path15.dirname(file2), `.${path15.basename(file2)}.${process9.pid}.${Date.now()}.tmp`);
-    writeFileSync3(tmp, JSON.stringify(next, null, 2) + "\n");
-    renameSync3(tmp, file2);
+    mkdirSync5(path16.dirname(file2), { recursive: true });
+    const tmp = path16.join(path16.dirname(file2), `.${path16.basename(file2)}.${process9.pid}.${Date.now()}.tmp`);
+    writeFileSync4(tmp, JSON.stringify(next, null, 2) + "\n");
+    renameSync4(tmp, file2);
     return true;
   } catch (e) {
     warn2(`sandbox: could not persist ${file2}: ${e instanceof Error ? e.message : String(e)}`);
@@ -31427,7 +31694,7 @@ function appendGlobalSandboxDeny(deniedPath) {
   return ok;
 }
 function sandboxConfigPath(workspaceRoot) {
-  return path15.join(workspaceRoot, ".zcode", "acp", "sandbox.json");
+  return path16.join(workspaceRoot, ".zcode", "acp", "sandbox.json");
 }
 function readLegacySandboxConfig(workspaceRoot) {
   let parsed;
@@ -31477,8 +31744,8 @@ async function ensureGlobalSandboxConfig(cwdRoots) {
     strictGit: legacyStrictGit
   };
   try {
-    mkdirSync4(path15.dirname(file2), { recursive: true });
-    writeFileSync3(file2, JSON.stringify(config2, null, 2) + "\n", { flag: "wx" });
+    mkdirSync5(path16.dirname(file2), { recursive: true });
+    writeFileSync4(file2, JSON.stringify(config2, null, 2) + "\n", { flag: "wx" });
     log(`sandbox: created ${file2}` + (legacyAllow.length + legacyDeny.length > 0 ? ` (migrated ${legacyAllow.length} allow / ${legacyDeny.length} deny legacy entries)` : " (toolchain template)"));
   } catch (e) {
     if (e.code !== "EEXIST") {
@@ -31512,7 +31779,7 @@ async function migrateLegacyArming() {
   }
 }
 function expandHome(p) {
-  return p.startsWith("~/") ? path15.join(os3.homedir(), p.slice(2)) : p;
+  return p.startsWith("~/") ? path16.join(os3.homedir(), p.slice(2)) : p;
 }
 function resolveReal(p) {
   const expanded = expandHome(p);
@@ -31522,14 +31789,14 @@ function resolveReal(p) {
     let dir = expanded;
     const tail = [];
     for (; ; ) {
-      const parent = path15.dirname(dir);
+      const parent = path16.dirname(dir);
       if (parent === dir)
         return expanded;
-      tail.unshift(path15.basename(dir));
+      tail.unshift(path16.basename(dir));
       dir = parent;
       try {
         const real = realpathSync(dir);
-        return path15.join(real, ...tail);
+        return path16.join(real, ...tail);
       } catch {
       }
     }
@@ -31549,7 +31816,7 @@ function buildSandboxProfile(input2) {
     seenRoots.add(real);
     allows.push(`(allow file-write* (subpath ${sb(real)}))`);
     if (input2.config.strictGit) {
-      denies.push(`(deny file-write* (subpath ${sb(path15.join(real, ".git"))}))`);
+      denies.push(`(deny file-write* (subpath ${sb(path16.join(real, ".git"))}))`);
     }
   }
   for (const allowed of input2.config.allow) {
@@ -31590,7 +31857,7 @@ function sandboxActive() {
   return true;
 }
 function sandboxProfilesRoot() {
-  return path15.join(os3.homedir(), ".zcode-acp", "sandbox");
+  return path16.join(os3.homedir(), ".zcode-acp", "sandbox");
 }
 function pidAlive(pid) {
   try {
@@ -31609,7 +31876,7 @@ function sweepProfileDirs(root) {
   }
   const now4 = Date.now();
   for (const entry of entries) {
-    const full = path15.join(root, entry);
+    const full = path16.join(root, entry);
     if (full === lastProfileDir)
       continue;
     const m = /^p-(\d+)-/.exec(entry);
@@ -31634,7 +31901,7 @@ function sweepLegacySbxDirs() {
   for (const entry of entries) {
     if (!entry.startsWith(LEGACY_SBX_PREFIX))
       continue;
-    const full = path15.join(home, entry);
+    const full = path16.join(home, entry);
     try {
       if (statSync4(full).mtimeMs < cutoff)
         rmSync(full, { recursive: true, force: true });
@@ -31644,10 +31911,10 @@ function sweepLegacySbxDirs() {
 }
 function armSandboxArgv(argv, input2) {
   const root = sandboxProfilesRoot();
-  mkdirSync4(root, { recursive: true });
-  const dir = mkdtempSync(path15.join(root, `p-${process9.pid}-`));
-  const file2 = path15.join(dir, "profile.sb");
-  writeFileSync3(file2, buildSandboxProfile({ ...input2, profileDir: dir, profilesRoot: root }), {
+  mkdirSync5(root, { recursive: true });
+  const dir = mkdtempSync(path16.join(root, `p-${process9.pid}-`));
+  const file2 = path16.join(dir, "profile.sb");
+  writeFileSync4(file2, buildSandboxProfile({ ...input2, profileDir: dir, profilesRoot: root }), {
     flag: "wx"
   });
   if (lastProfileDir && lastProfileDir !== dir) {
@@ -31782,48 +32049,48 @@ function extractExitCode(resultPayload, isError = false) {
   return 0;
 }
 function buildResultContent(toolName, resultPayload, isError = false) {
-  let text = "";
+  let text2 = "";
   if (resultPayload && typeof resultPayload === "object" && !Array.isArray(resultPayload)) {
     const obj = resultPayload;
     const c = obj["content"];
     if (typeof c === "string" && c) {
-      text = c;
+      text2 = c;
     } else if (obj["success"] === false) {
-      text = String(obj["error"] ?? obj["message"] ?? "");
+      text2 = String(obj["error"] ?? obj["message"] ?? "");
     } else if (c == null) {
       try {
-        text = JSON.stringify(obj);
+        text2 = JSON.stringify(obj);
       } catch {
-        text = String(resultPayload);
+        text2 = String(resultPayload);
       }
     }
   } else if (typeof resultPayload === "string") {
-    text = resultPayload;
+    text2 = resultPayload;
   } else if (resultPayload != null) {
     try {
-      text = JSON.stringify(resultPayload);
+      text2 = JSON.stringify(resultPayload);
     } catch {
-      text = String(resultPayload);
+      text2 = String(resultPayload);
     }
   }
-  if (!text || !text.trim())
+  if (!text2 || !text2.trim())
     return [];
-  text = text.slice(0, OUTPUT_MAX);
+  text2 = text2.slice(0, OUTPUT_MAX);
   if (isError) {
-    return [{ type: "content", content: { type: "text", text: "```\n" + text + "\n```" } }];
+    return [{ type: "content", content: { type: "text", text: "```\n" + text2 + "\n```" } }];
   }
   if (toolName === "Read" || toolName === "read") {
-    return [{ type: "content", content: { type: "text", text } }];
+    return [{ type: "content", content: { type: "text", text: text2 } }];
   }
   if (toolName === "Bash" || toolName === "bash") {
     return [
       {
         type: "content",
-        content: { type: "text", text: "```console\n" + text.trimEnd() + "\n```" }
+        content: { type: "text", text: "```console\n" + text2.trimEnd() + "\n```" }
       }
     ];
   }
-  return [{ type: "content", content: { type: "text", text } }];
+  return [{ type: "content", content: { type: "text", text: text2 } }];
 }
 function buildDiffContent(display) {
   if (!display || typeof display !== "object" || Array.isArray(display))
@@ -31901,30 +32168,30 @@ function extractLocations(toolName, inp, display) {
   return [];
 }
 function parseSubagentMetadata(rawContent) {
-  let text;
+  let text2;
   if (typeof rawContent === "string") {
-    text = rawContent;
+    text2 = rawContent;
   } else if (rawContent && typeof rawContent === "object" && !Array.isArray(rawContent)) {
     const c = rawContent["content"];
     if (typeof c !== "string")
       return null;
-    text = c;
+    text2 = c;
   } else {
     return null;
   }
-  if (!text.includes("agentId:") && !text.includes("<usage>"))
+  if (!text2.includes("agentId:") && !text2.includes("<usage>"))
     return null;
   const meta3 = {};
-  const aid = text.match(AGENT_ID_RE);
+  const aid = text2.match(AGENT_ID_RE);
   if (aid)
     meta3.agentId = aid[1];
-  const usage = text.match(USAGE_RE);
+  const usage = text2.match(USAGE_RE);
   if (usage) {
     meta3.tokens = Number(usage[1]);
     meta3.toolUses = Number(usage[2]);
     meta3.durationMs = Number(usage[3]);
   }
-  if (BACKGROUND_RE.test(text))
+  if (BACKGROUND_RE.test(text2))
     meta3.background = true;
   if (meta3.agentId === void 0 && meta3.tokens === void 0)
     return null;
@@ -32101,7 +32368,7 @@ var init_tool_helpers = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/handlers/dispatch.js
-import { randomUUID as randomUUID3 } from "node:crypto";
+import { randomUUID as randomUUID4 } from "node:crypto";
 function hintSandboxEperm(server, ev) {
   if (sandboxEpermHinted || !server.backendSandboxed || ev.kind !== "ToolCallUpdate")
     return;
@@ -32347,7 +32614,7 @@ function dispatchFilesChanged(cx, acpSid, ev) {
   const m = messages();
   return sendSessionUpdate(cx, acpSid, {
     sessionUpdate: "tool_call",
-    toolCallId: `files_${randomUUID3().slice(0, 8)}`,
+    toolCallId: `files_${randomUUID4().slice(0, 8)}`,
     title: m.changedFilesTitle(files.length, preview) + ellipsis,
     kind: "edit",
     status: "completed",
@@ -32464,12 +32731,12 @@ async function refresh(entry) {
   return entry.inFlight;
 }
 async function runRefresh(server) {
-  const text = await fetchDockText();
-  if (text === null)
+  const text2 = await fetchDockText();
+  if (text2 === null)
     return;
   const prev = server.quotaDock;
-  server.quotaDock = text;
-  if (text === prev)
+  server.quotaDock = text2;
+  if (text2 === prev)
     return;
   await emitQuotaOptions(server);
 }
@@ -32574,11 +32841,11 @@ __export(deferred_probe_capability_exports, {
 import { createHash as createHash5 } from "node:crypto";
 import { closeSync as closeSync3, existsSync as existsSync6, openSync as openSync3, readFileSync as readFileSync14, readSync as readSync2, realpathSync as realpathSync2 } from "node:fs";
 import os4 from "node:os";
-import path16 from "node:path";
+import path17 from "node:path";
 function desktopBundleEntryPath() {
   if (process.platform === "win32") {
-    const localAppData = process.env.LOCALAPPDATA ?? path16.join(os4.homedir(), "AppData", "Local");
-    return path16.join(localAppData, "Programs", "ZCode", "resources", "glm", "zcode.cjs");
+    const localAppData = process.env.LOCALAPPDATA ?? path17.join(os4.homedir(), "AppData", "Local");
+    return path17.join(localAppData, "Programs", "ZCode", "resources", "glm", "zcode.cjs");
   }
   return MACOS_ENTRY;
 }
@@ -32623,15 +32890,15 @@ function readAsarPackageVersion2(asarPath) {
 }
 function readDesktopBundleVersion(entry) {
   if (process.platform === "win32") {
-    const resourcesDir = path16.dirname(path16.dirname(entry));
-    const unpackedPkg = path16.join(resourcesDir, "app", "package.json");
+    const resourcesDir = path17.dirname(path17.dirname(entry));
+    const unpackedPkg = path17.join(resourcesDir, "app", "package.json");
     if (existsSync6(unpackedPkg)) {
       const pkg = JSON.parse(readFileSync14(unpackedPkg, "utf8"));
       return typeof pkg.version === "string" ? pkg.version : void 0;
     }
-    return readAsarPackageVersion2(path16.join(resourcesDir, "app.asar"));
+    return readAsarPackageVersion2(path17.join(resourcesDir, "app.asar"));
   }
-  const plist = readFileSync14(path16.join(path16.dirname(entry), "../../Info.plist"), "utf8");
+  const plist = readFileSync14(path17.join(path17.dirname(entry), "../../Info.plist"), "utf8");
   return /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/u.exec(plist)?.[1];
 }
 function bundleState(entry = desktopBundleEntryPath()) {
@@ -32696,8 +32963,8 @@ function parseEntryIndex(argv, entry) {
   if (!candidate)
     return -1;
   if (process.platform === "win32") {
-    const resolvedEntry = path16.resolve(entry);
-    if (path16.resolve(candidate).toLowerCase() !== resolvedEntry.toLowerCase())
+    const resolvedEntry = path17.resolve(entry);
+    if (path17.resolve(candidate).toLowerCase() !== resolvedEntry.toLowerCase())
       return -1;
     const realEntry = realpathSync2(entry);
     if (realpathSync2(candidate) !== realEntry || realEntry.toLowerCase() !== resolvedEntry.toLowerCase()) {
@@ -33280,11 +33547,11 @@ var init_backend = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/closed-sessions.js
-import { existsSync as existsSync7, mkdirSync as mkdirSync5, readFileSync as readFileSync15, renameSync as renameSync4, writeFileSync as writeFileSync4 } from "node:fs";
-import path17 from "node:path";
+import { existsSync as existsSync7, mkdirSync as mkdirSync6, readFileSync as readFileSync15, renameSync as renameSync5, writeFileSync as writeFileSync5 } from "node:fs";
+import path18 from "node:path";
 import process11 from "node:process";
 function storePath2() {
-  return path17.join(zcodeHomeDir2(), "v2", STORE_FILENAME2);
+  return path18.join(zcodeHomeDir2(), "v2", STORE_FILENAME2);
 }
 function readTable2() {
   try {
@@ -33307,11 +33574,11 @@ function readTable2() {
 function persist3(table) {
   try {
     const p = storePath2();
-    const dir = path17.dirname(p);
-    mkdirSync5(dir, { recursive: true });
+    const dir = path18.dirname(p);
+    mkdirSync6(dir, { recursive: true });
     const tmp = `${p}.tmp-${process11.pid}`;
-    writeFileSync4(tmp, JSON.stringify(table, null, 2));
-    renameSync4(tmp, p);
+    writeFileSync5(tmp, JSON.stringify(table, null, 2));
+    renameSync5(tmp, p);
   } catch (e) {
     warn2(`closed-sessions: store write failed (${e instanceof Error ? e.message : String(e)}) \u2014 the close record will not stick`);
   }
@@ -33784,7 +34051,7 @@ var init_poller = __esm({
 });
 
 // node_modules/zcode-acp-server/dist/handlers/background-tasks.js
-import { randomUUID as randomUUID4 } from "node:crypto";
+import { randomUUID as randomUUID5 } from "node:crypto";
 function toAcpStatus(status) {
   if (status === "completed")
     return "completed";
@@ -34069,7 +34336,7 @@ var init_background_tasks = __esm({
             return;
           }
           task = {
-            acpCallId: `bg_${randomUUID4().slice(0, 12)}`,
+            acpCallId: `bg_${randomUUID5().slice(0, 12)}`,
             reusesLaunchCard: false,
             description: p.description ?? "",
             lastStatus: ""
@@ -34213,7 +34480,7 @@ var init_background_tasks = __esm({
         this.server.differs?.get(this.zcodeSid)?.noteLiveTextDelta("text", delta, backendMessageId);
         let msgId = backendMessageId ?? this.activeMessageId();
         if (!msgId) {
-          msgId = `bg_msg_${randomUUID4().slice(0, 12)}`;
+          msgId = `bg_msg_${randomUUID5().slice(0, 12)}`;
           this.firstMessageId = msgId;
         }
         await this.server.notifyByZcodeSid(this.zcodeSid, {
@@ -34385,24 +34652,24 @@ function describeToolInput(input2) {
 function inputPopupContent(input2) {
   if (input2 === null || input2 === void 0)
     return void 0;
-  let text;
+  let text2;
   if (typeof input2 === "object") {
     const command = input2["command"];
     if (typeof command === "string" && command.trim())
-      text = command.trim();
+      text2 = command.trim();
   }
-  if (text === void 0) {
+  if (text2 === void 0) {
     try {
-      text = JSON.stringify(input2, null, 2) ?? void 0;
+      text2 = JSON.stringify(input2, null, 2) ?? void 0;
     } catch {
       return void 0;
     }
   }
-  if (!text)
+  if (!text2)
     return void 0;
-  if (text.length > 8e3)
-    text = text.slice(0, 8e3 - 1) + "\u2026";
-  return [{ type: "content", content: { type: "text", text } }];
+  if (text2.length > 8e3)
+    text2 = text2.slice(0, 8e3 - 1) + "\u2026";
+  return [{ type: "content", content: { type: "text", text: text2 } }];
 }
 function inputLocations(input2) {
   if (typeof input2 !== "object" || input2 === null)
@@ -35515,21 +35782,21 @@ var init_server_requests = __esm({
 
 // node_modules/zcode-acp-server/dist/handlers/sandbox-allow.js
 import os5 from "node:os";
-import path18 from "node:path";
-import { randomUUID as randomUUID5 } from "node:crypto";
-function extractSandboxDenial(text) {
-  if (!text.toLowerCase().includes(EPERM.toLowerCase()))
+import path19 from "node:path";
+import { randomUUID as randomUUID6 } from "node:crypto";
+function extractSandboxDenial(text2) {
+  if (!text2.toLowerCase().includes(EPERM.toLowerCase()))
     return null;
-  const mkdirMatch = /mkdir: ((?:\/|\.{1,2}\/)[^\s"\\:]+): /i.exec(text);
+  const mkdirMatch = /mkdir: ((?:\/|\.{1,2}\/)[^\s"\\:]+): /i.exec(text2);
   if (mkdirMatch)
     return { path: mkdirMatch[1], isMkdir: true };
-  const generic = /(?:^|[\s"([{])((?:\/|\.{1,2}\/)[^\s"\\:]+): operation not permitted/i.exec(text);
+  const generic = /(?:^|[\s"([{])((?:\/|\.{1,2}\/)[^\s"\\:]+): operation not permitted/i.exec(text2);
   if (generic)
     return { path: generic[1], isMkdir: false };
-  const nodeForm = /operation not permitted, ([a-z]+) '([^']+)'(?![\w/])/i.exec(text);
+  const nodeForm = /operation not permitted, ([a-z]+) '([^']+)'(?![\w/])/i.exec(text2);
   if (nodeForm)
     return { path: nodeForm[2], isMkdir: nodeForm[1].toLowerCase() === "mkdir" };
-  const zsh = /operation not permitted: ((?:\/|\.{1,2}\/)[^\s"\\:]+)/i.exec(text);
+  const zsh = /operation not permitted: ((?:\/|\.{1,2}\/)[^\s"\\:]+)/i.exec(text2);
   if (!zsh)
     return null;
   return { path: zsh[1], isMkdir: false };
@@ -35588,20 +35855,20 @@ function flushSandboxGrants(target, grants) {
   log(`sandbox: restarting backend with ${count} granted path(s)`);
   dying.close().catch((e) => warn2(`sandbox: backend kill failed: ${e instanceof Error ? e.message : String(e)}`));
 }
-function extractPermDeniedPath(text) {
-  if (!text.toLowerCase().includes("permission denied"))
+function extractPermDeniedPath(text2) {
+  if (!text2.toLowerCase().includes("permission denied"))
     return null;
-  const generic = /(?:^|[\s"([{])((?:\/|\.{1,2}\/)[^\s"\\:]+): permission denied/i.exec(text);
+  const generic = /(?:^|[\s"([{])((?:\/|\.{1,2}\/)[^\s"\\:]+): permission denied/i.exec(text2);
   if (generic)
     return generic[1];
-  const zsh = /permission denied: ((?:\/|\.{1,2}\/)[^\s"\\:]+)/i.exec(text);
+  const zsh = /permission denied: ((?:\/|\.{1,2}\/)[^\s"\\:]+)/i.exec(text2);
   return zsh ? zsh[1] : null;
 }
 function protectedSandboxPaths(cwdRoots) {
   const out = [globalSandboxConfigDir()];
   if (readGlobalSandboxConfig().strictGit) {
     for (const root of cwdRoots)
-      out.push(path18.join(resolveReal(root), ".git"));
+      out.push(path19.join(resolveReal(root), ".git"));
   }
   return out;
 }
@@ -35610,16 +35877,16 @@ function underAny(target, bases) {
   const t = fold ? target.toLowerCase() : target;
   return bases.some((b) => {
     const base = fold ? b.toLowerCase() : b;
-    return t === base || t.startsWith(base + path18.sep);
+    return t === base || t.startsWith(base + path19.sep);
   });
 }
 async function handleSandboxDenial(server, cx, acpSid, denial, toolCallId, turn, freeze) {
   if (!server.backendSandboxed)
     return;
   const m = messages();
-  const raw = denial.isMkdir ? denial.path : path18.dirname(denial.path);
+  const raw = denial.isMkdir ? denial.path : path19.dirname(denial.path);
   const cwd = server.sessionCwds.get(acpSid);
-  const targetReal = resolveReal(path18.isAbsolute(raw) ? raw : path18.resolve(cwd ?? process.cwd(), raw));
+  const targetReal = resolveReal(path19.isAbsolute(raw) ? raw : path19.resolve(cwd ?? process.cwd(), raw));
   let asked = server.sandboxAskedPaths.get(acpSid);
   if (!asked) {
     asked = /* @__PURE__ */ new Map();
@@ -35638,18 +35905,18 @@ async function handleSandboxDenial(server, cx, acpSid, denial, toolCallId, turn,
   asked.set(targetReal, Date.now());
   if (underAny(targetReal, protectedSandboxPaths(server.sandboxRoots()))) {
     asked.set(targetReal, Number.POSITIVE_INFINITY);
-    await sendTextChunk(cx, acpSid, m.sandboxProtectedHint, randomUUID5());
+    await sendTextChunk(cx, acpSid, m.sandboxProtectedHint, randomUUID6());
     return;
   }
   const home = resolveReal(os5.homedir());
-  if (targetReal === "/" || targetReal === home || home.startsWith(targetReal + path18.sep)) {
+  if (targetReal === "/" || targetReal === home || home.startsWith(targetReal + path19.sep)) {
     asked.set(targetReal, Number.POSITIVE_INFINITY);
-    await sendTextChunk(cx, acpSid, m.sandboxOverBroadHint(targetReal), randomUUID5());
+    await sendTextChunk(cx, acpSid, m.sandboxOverBroadHint(targetReal), randomUUID6());
     return;
   }
   if (underAny(targetReal, readGlobalSandboxConfig().deny.map(resolveReal))) {
     asked.set(targetReal, Number.POSITIVE_INFINITY);
-    await sendTextChunk(cx, acpSid, m.sandboxDenyListedHint(targetReal), randomUUID5());
+    await sendTextChunk(cx, acpSid, m.sandboxDenyListedHint(targetReal), randomUUID6());
     return;
   }
   if (turn && freeze) {
@@ -35706,13 +35973,13 @@ async function handleSandboxDenial(server, cx, acpSid, denial, toolCallId, turn,
     if (isInteractionInterrupted(resp) && unattended) {
       asked.set(targetReal, UNATTENDED_PIN);
       settleDeniedTurn(server, acpSid, turn, m.sandboxUnattendedTimeoutContinuation(targetReal));
-      await sendTextChunk(cx, acpSid, m.sandboxUnattendedTimeoutHint(targetReal), randomUUID5());
+      await sendTextChunk(cx, acpSid, m.sandboxUnattendedTimeoutHint(targetReal), randomUUID6());
       log(`sandbox: unattended ask for ${targetReal} timed out \u2014 denied for this context`);
       return;
     }
     if (turn) {
       settleDeniedTurn(server, acpSid, turn, m.sandboxAskUndeliveredContinuation(targetReal));
-      await sendTextChunk(cx, acpSid, m.sandboxAskUndeliveredHint(targetReal), randomUUID5());
+      await sendTextChunk(cx, acpSid, m.sandboxAskUndeliveredHint(targetReal), randomUUID6());
     }
     warn2(`sandbox: allow ask for ${targetReal} ended without a decision \u2014 may re-ask later`);
     return;
@@ -35730,12 +35997,12 @@ async function handleSandboxDenial(server, cx, acpSid, denial, toolCallId, turn,
   if (decision === "reject_always") {
     const persisted = appendGlobalSandboxDeny(targetReal);
     settleDeniedTurn(server, acpSid, turn, m.sandboxRejectContinuation(targetReal));
-    await sendTextChunk(cx, acpSid, persisted ? m.sandboxRejectAlwaysPersisted(targetReal) : m.sandboxRejectAlwaysUnpersisted(targetReal), randomUUID5());
+    await sendTextChunk(cx, acpSid, persisted ? m.sandboxRejectAlwaysPersisted(targetReal) : m.sandboxRejectAlwaysUnpersisted(targetReal), randomUUID6());
     return;
   }
   if (decision === "reject_once" || decision === "deny") {
     settleDeniedTurn(server, acpSid, turn, m.sandboxRejectContinuation(targetReal));
-    await sendTextChunk(cx, acpSid, m.sandboxRejectOnceHint(targetReal), randomUUID5());
+    await sendTextChunk(cx, acpSid, m.sandboxRejectOnceHint(targetReal), randomUUID6());
     return;
   }
   if (decision === "always") {
@@ -35745,7 +36012,7 @@ async function handleSandboxDenial(server, cx, acpSid, denial, toolCallId, turn,
     server.sandboxOnceAllows.add(targetReal);
   }
   server.sandboxRestartBatcher.add(acpSid, targetReal);
-  await sendTextChunk(cx, acpSid, m.sandboxRestartHint(targetReal), randomUUID5());
+  await sendTextChunk(cx, acpSid, m.sandboxRestartHint(targetReal), randomUUID6());
   log(`sandbox: allow granted for ${targetReal} (${decision}) \u2014 restart batched`);
 }
 var EPERM, GENERIC_HINT_KEY, READ_ONLY_TOOLS, SANDBOX_RESTART_BATCH_MS, SANDBOX_ASK_RETRY_MS, UNATTENDED_PIN, SandboxRestartBatcher;
@@ -35833,7 +36100,7 @@ __export(tasks_index_exports, {
 });
 import { existsSync as existsSync8, statSync as statSync5 } from "node:fs";
 import { tmpdir as tmpdir2 } from "node:os";
-import path19 from "node:path";
+import path20 from "node:path";
 async function loadSqlite() {
   if (DatabaseSync !== void 0)
     return DatabaseSync;
@@ -36193,7 +36460,7 @@ function isSelectableWorkspace(p) {
     return false;
   const excluded = ["/tmp", "/private/tmp", "/var/folders", tmpdir2(), zcodeHomeDir2()];
   for (const ex of excluded) {
-    if (p === ex || p.startsWith(ex + path19.sep))
+    if (p === ex || p.startsWith(ex + path20.sep))
       return false;
   }
   try {
@@ -36232,21 +36499,21 @@ var init_tasks_index = __esm({
     init_bridge_accounts();
     init_options();
     init_utils();
-    TASKS_INDEX_PATH = path19.join(path19.dirname(ZCODE_CREDS_PATH), "tasks-index.sqlite");
+    TASKS_INDEX_PATH = path20.join(path20.dirname(ZCODE_CREDS_PATH), "tasks-index.sqlite");
     RETIRE_PROBE_MAX_IDS = 500;
   }
 });
 
 // node_modules/zcode-acp-server/dist/terminal-title.js
 import { closeSync as closeSync4, openSync as openSync4, writeSync } from "node:fs";
-import path20 from "node:path";
+import path21 from "node:path";
 function sanitizeTitle(raw) {
   const collapsed = raw.replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ").replace(/\s+/g, " ").trim();
   return collapsed.length > TITLE_MAX ? collapsed.slice(0, TITLE_MAX - 1) + "\u2026" : collapsed;
 }
 function sessionTabTitle(title, cwd) {
   const cwdTrimmed = (cwd ?? "").trim();
-  let project = cwdTrimmed ? sanitizeTitle(path20.basename(cwdTrimmed)) : "";
+  let project = cwdTrimmed ? sanitizeTitle(path21.basename(cwdTrimmed)) : "";
   if (project.length > PROJECT_MAX)
     project = project.slice(0, PROJECT_MAX - 1) + "\u2026";
   if (!project)
@@ -36303,7 +36570,7 @@ __export(session_titles_exports, {
   SessionTitleListener: () => SessionTitleListener,
   renameSessionCore: () => renameSessionCore
 });
-import { randomUUID as randomUUID6 } from "node:crypto";
+import { randomUUID as randomUUID7 } from "node:crypto";
 function normalizeTitle(raw) {
   return raw.replace(/[\r\n]+/g, " ").trim().slice(0, 80);
 }
@@ -36311,7 +36578,7 @@ async function sendBackendRename(server, zcodeSid, title) {
   try {
     const backend = await server.ensureBackend();
     const resp = await backend.request(server.nextId(), "v4/command", {
-      commandId: randomUUID6(),
+      commandId: randomUUID7(),
       clientId: "zcode-acp-server",
       sessionId: zcodeSid,
       type: "renameSession",
@@ -36651,9 +36918,9 @@ async function envWithLoginShell(env = process.env) {
       continue;
     merged[k] = v;
   }
-  const path33 = unionPath(shell.PATH, env.PATH);
-  if (path33)
-    merged.PATH = path33;
+  const path34 = unionPath(shell.PATH, env.PATH);
+  if (path34)
+    merged.PATH = path34;
   for (const key of Object.keys(merged)) {
     if (PINNED_PREFIXES.some((p) => key.startsWith(p)) && env[key] === void 0) {
       delete merged[key];
@@ -38657,15 +38924,15 @@ var init_projection_differ = __esm({
       liveTextMessageIds = /* @__PURE__ */ new Set();
       /** Record a live-dispatched delta so the completion replay can suppress a
        * journal copy of content the client already received. Per content kind. */
-      noteLiveTextDelta(kind, text, messageId) {
-        if (!text)
+      noteLiveTextDelta(kind, text2, messageId) {
+        if (!text2)
           return;
         if (kind === "text") {
-          this.liveTextDelivered += text;
+          this.liveTextDelivered += text2;
           if (messageId)
             this.liveTextMessageIds.add(messageId);
         } else {
-          this.liveReasoningDelivered += text;
+          this.liveReasoningDelivered += text2;
         }
       }
       /** Mark all given messages as seen (baseline so we don't re-emit history). */
@@ -38731,15 +38998,15 @@ var init_projection_differ = __esm({
             if (ptype === "tool") {
               events.push(...this.diffToolPart(p));
             } else if (ptype === "text" && role === "assistant") {
-              const text = p.text ?? "";
-              if (text.trim()) {
-                events.push({ kind: "TextDelta", text, messageId: m.info.id });
+              const text2 = p.text ?? "";
+              if (text2.trim()) {
+                events.push({ kind: "TextDelta", text: text2, messageId: m.info.id });
                 this.emittedTextThisTurn = true;
               }
             } else if (ptype === "reasoning") {
-              const text = p.text ?? "";
-              if (text.trim())
-                events.push({ kind: "ReasoningDelta", text, messageId: m.info.id });
+              const text2 = p.text ?? "";
+              if (text2.trim())
+                events.push({ kind: "ReasoningDelta", text: text2, messageId: m.info.id });
             } else if (ptype === "patch") {
               const ph = p.hash;
               if (ph && !this.seenPatchHashes.has(ph)) {
@@ -39053,8 +39320,8 @@ async function fetchMessages(server, zcodeSid, opts = {}) {
 async function fetchMessagesSinceAnchor(server, zcodeSid, anchor2, opts = {}) {
   return fetchMessages(server, zcodeSid, { ...opts, afterMessageId: anchor2 });
 }
-function stripSystemReminders(text) {
-  return text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "").replace(/The (?:TodoWrite|Read) tool hasn't been used recently\.[\s\S]*?This is just a gentle reminder - ignore if not applicable\./g, "").replace(/Here (?:are|is)[^\n]*todo list:\s*\n\s*\n\[[\s\S]*?\](?=\n|$)/g, "").trim();
+function stripSystemReminders(text2) {
+  return text2.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "").replace(/The (?:TodoWrite|Read) tool hasn't been used recently\.[\s\S]*?This is just a gentle reminder - ignore if not applicable\./g, "").replace(/Here (?:are|is)[^\n]*todo list:\s*\n\s*\n\[[\s\S]*?\](?=\n|$)/g, "").trim();
 }
 function collapsedMeta(kind) {
   return { zcode: { collapsed: true, kind } };
@@ -39071,8 +39338,8 @@ function transcriptTitle(tool, inputJson) {
   }
   return messages().replayToolFallback(tool);
 }
-function notificationTitle(text) {
-  const summary = /<summary>([^<]*)<\/summary>/.exec(text)?.[1];
+function notificationTitle(text2) {
+  const summary = /<summary>([^<]*)<\/summary>/.exec(text2)?.[1];
   if (summary) {
     const decoded = summary.replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
     if (decoded)
@@ -39080,20 +39347,20 @@ function notificationTitle(text) {
   }
   return "Background task";
 }
-function collapseUserText(text, semantics, summary) {
+function collapseUserText(text2, semantics, summary) {
   if (semantics?.kind === "compact_summary") {
     const raw = typeof summary?.title === "string" && summary.title ? summary.title : messages().replayCompactSummary;
     return { title: raw.length > 60 ? raw.slice(0, 57) + "\u2026" : raw, kind: "compact" };
   }
-  if (CONTEXT_HANDOFF.test(text)) {
+  if (CONTEXT_HANDOFF.test(text2)) {
     return { title: messages().replayContextHandoff, kind: "context-handoff" };
   }
-  const tool = TOOL_TRANSCRIPT.exec(text);
+  const tool = TOOL_TRANSCRIPT.exec(text2);
   if (tool) {
     return { title: transcriptTitle(tool[1], tool[2]), kind: "tool-transcript" };
   }
-  if (TASK_NOTIFICATION.test(text)) {
-    return { title: notificationTitle(text), kind: "task-notification" };
+  if (TASK_NOTIFICATION.test(text2)) {
+    return { title: notificationTitle(text2), kind: "task-notification" };
   }
   return null;
 }
@@ -39142,15 +39409,15 @@ async function replayMessages(cx, acpSid, messages2, opts = {}) {
         continue;
       const ptype = p.type;
       if (ptype === "text") {
-        let text = p.text ?? "";
-        if (!text)
+        let text2 = p.text ?? "";
+        if (!text2)
           continue;
         if (role === "user") {
-          text = stripSystemReminders(text);
-          if (!text)
+          text2 = stripSystemReminders(text2);
+          if (!text2)
             continue;
         }
-        const collapse = role === "user" ? collapseUserText(text, info.semantics, info.summary) : null;
+        const collapse = role === "user" ? collapseUserText(text2, info.semantics, info.summary) : null;
         if (collapse) {
           if (collapse.kind === "tool-transcript" && !toolsKept(mi))
             continue;
@@ -39162,7 +39429,7 @@ async function replayMessages(cx, acpSid, messages2, opts = {}) {
               title: collapse.title,
               kind: "other",
               status: "completed",
-              content: [{ type: "content", content: { type: "text", text } }],
+              content: [{ type: "content", content: { type: "text", text: text2 } }],
               _meta: collapsedMeta(collapse.kind)
             })
           });
@@ -39173,20 +39440,20 @@ async function replayMessages(cx, acpSid, messages2, opts = {}) {
             sessionId: acpSid,
             update: decorate({
               sessionUpdate: role === "user" ? "user_message_chunk" : "agent_message_chunk",
-              content: { type: "text", text },
+              content: { type: "text", text: text2 },
               messageId: mid
             })
           });
         }
       } else if (ptype === "reasoning") {
         const rp = p;
-        const text = rp.text ?? rp.content ?? "";
-        if (text) {
+        const text2 = rp.text ?? rp.content ?? "";
+        if (text2) {
           await cx.notify("session/update", {
             sessionId: acpSid,
             update: decorate({
               sessionUpdate: "agent_thought_chunk",
-              content: { type: "text", text },
+              content: { type: "text", text: text2 },
               messageId: `thought_${mid}`
             })
           });
@@ -39515,163 +39782,6 @@ var init_extensions = __esm({
   }
 });
 
-// node_modules/zcode-acp-server/dist/quota/resume.js
-function asRec(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : void 0;
-}
-function finiteNumber(value) {
-  if (typeof value === "number" && Number.isFinite(value))
-    return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : void 0;
-  }
-  return void 0;
-}
-function isQuotaStopFailureMessage(message) {
-  if (typeof message !== "string" || message === "")
-    return false;
-  if (QUOTA_CODE_BRACKET.test(message))
-    return true;
-  return message.includes("rate_limited") && QUOTA_MESSAGE_HINT.test(message);
-}
-function classifyQuotaExhaustion(error62) {
-  const root = asRec(error62);
-  if (!root)
-    return void 0;
-  const nodes = [];
-  const visit2 = (value, depth) => {
-    const rec = asRec(value);
-    if (!rec || depth > 3)
-      return;
-    nodes.push(rec);
-    visit2(rec["data"], depth + 1);
-    visit2(rec["cause"], depth + 1);
-    visit2(rec["context"], depth + 1);
-  };
-  visit2(error62, 0);
-  for (const node2 of nodes) {
-    const stop = asRec(node2["providerStop"]);
-    if (!stop)
-      continue;
-    if (stop["kind"] !== "quota")
-      return void 0;
-    const info = infoFromStop(stop);
-    return info;
-  }
-  const providerCode = firstString(nodes, ["providerCode"]) ?? firstCodeInQuotaSet(nodes) ?? void 0;
-  const resetAt = resetAtFromNodes(nodes);
-  if (providerCode !== void 0 && QUOTA_PROVIDER_CODES.has(providerCode)) {
-    return { providerCode, ...resetAt === void 0 ? {} : { resetAt } };
-  }
-  const reason = firstString(nodes, ["reason"]) ?? "";
-  const retryable = firstBool(nodes, ["retryable"]);
-  const message = firstString(nodes, ["message", "detail"]) ?? "";
-  if ((reason === "rate_limited" || reason === "invalid_request") && retryable !== true && QUOTA_MESSAGE_HINT.test(message)) {
-    return { ...resetAt === void 0 ? {} : { resetAt } };
-  }
-  return void 0;
-}
-function infoFromStop(stop) {
-  const providerCode = typeof stop["providerCode"] === "string" && stop["providerCode"] ? stop["providerCode"] : void 0;
-  const resetAt = finiteNumber(stop["resetAt"]);
-  return {
-    ...providerCode === void 0 ? {} : { providerCode },
-    ...resetAt === void 0 || resetAt <= Date.now() ? {} : { resetAt }
-  };
-}
-function firstString(nodes, keys) {
-  for (const node2 of nodes) {
-    for (const key of keys) {
-      const v = node2[key];
-      if (typeof v === "string" && v !== "")
-        return v;
-    }
-  }
-  return void 0;
-}
-function firstBool(nodes, keys) {
-  for (const node2 of nodes) {
-    for (const key of keys) {
-      const v = node2[key];
-      if (typeof v === "boolean")
-        return v;
-    }
-  }
-  return void 0;
-}
-function firstCodeInQuotaSet(nodes) {
-  for (const node2 of nodes) {
-    const code = node2["code"];
-    if (typeof code === "string" && QUOTA_PROVIDER_CODES.has(code))
-      return code;
-  }
-  return void 0;
-}
-function resetAtFromNodes(nodes) {
-  for (const node2 of nodes) {
-    const direct = finiteNumber(node2["resetAt"]);
-    if (direct !== void 0 && direct > Date.now())
-      return direct;
-  }
-  for (const node2 of nodes) {
-    const ms = finiteNumber(node2["retryAfterMs"]);
-    if (ms !== void 0 && ms > 0)
-      return Date.now() + ms;
-    const seconds = finiteNumber(node2["retryAfterSeconds"]);
-    if (seconds !== void 0 && seconds > 0)
-      return Date.now() + seconds * 1e3;
-  }
-  return void 0;
-}
-function quotaResetAtFromResult(result, now4 = Date.now()) {
-  if (result.kind !== "success")
-    return void 0;
-  let best;
-  for (const item of result.items) {
-    if (item.usedPercent < QUOTA_EXHAUSTED_PERCENT)
-      continue;
-    const reset = item.nextResetTime;
-    if (typeof reset !== "number" || !Number.isFinite(reset) || reset <= now4)
-      continue;
-    if (best === void 0 || reset < best)
-      best = reset;
-  }
-  return best;
-}
-function quotaBackoffMs(attempt, baseMs = 5 * 6e4, capMs = 2 * 60 * 6e4) {
-  const raw = baseMs * 2 ** Math.max(0, attempt - 1);
-  return Math.min(raw, capMs);
-}
-var QUOTA_PROVIDER_CODES, QUOTA_EXHAUSTED_PERCENT, QUOTA_MESSAGE_HINT, QUOTA_CODE_BRACKET;
-var init_resume = __esm({
-  "node_modules/zcode-acp-server/dist/quota/resume.js"() {
-    QUOTA_PROVIDER_CODES = /* @__PURE__ */ new Set([
-      "1005",
-      "1308",
-      "1310",
-      "1313",
-      "1316",
-      "1317",
-      "1318",
-      "1319",
-      "1320",
-      "1321",
-      "2056",
-      "20097",
-      "insufficient_quota",
-      "credit_balance_exhausted",
-      "organization_spend_limit_exceeded",
-      "project_spend_limit_exceeded",
-      "organization_usage_limit_exceeded",
-      "exceeded_current_quota_error"
-    ]);
-    QUOTA_EXHAUSTED_PERCENT = 98;
-    QUOTA_MESSAGE_HINT = /quota|usage cap|额度|配额|余额|balance|credit/i;
-    QUOTA_CODE_BRACKET = /\[(1005|1308|1310|1313|1316|1317|1318|1319|1320|1321|2056|20097|insufficient_quota|credit_balance_exhausted|organization_spend_limit_exceeded|project_spend_limit_exceeded|organization_usage_limit_exceeded|exceeded_current_quota_error)\]/;
-  }
-});
-
 // node_modules/zcode-acp-server/dist/config/auto-compact.js
 var auto_compact_exports = {};
 __export(auto_compact_exports, {
@@ -39681,12 +39791,12 @@ __export(auto_compact_exports, {
   runAutoCompactDetached: () => runAutoCompactDetached,
   waitForAutoCompactIdle: () => waitForAutoCompactIdle
 });
-import { randomUUID as randomUUID7 } from "node:crypto";
+import { randomUUID as randomUUID8 } from "node:crypto";
 async function maybeAutoCompact(server, cx, acpSid, zcodeSid) {
   const threshold = autoCompactThreshold();
   if (threshold <= 0)
     return;
-  const msgId = randomUUID7();
+  const msgId = randomUUID8();
   try {
     let used = 0;
     try {
@@ -39782,19 +39892,19 @@ __export(state_exports, {
   verifyPath: () => verifyPath,
   writeGoalState: () => writeGoalState
 });
-import { mkdirSync as mkdirSync6, readFileSync as readFileSync16, renameSync as renameSync5, unlinkSync as unlinkSync2, writeFileSync as writeFileSync5 } from "node:fs";
-import path21 from "node:path";
+import { mkdirSync as mkdirSync7, readFileSync as readFileSync16, renameSync as renameSync6, unlinkSync as unlinkSync3, writeFileSync as writeFileSync6 } from "node:fs";
+import path22 from "node:path";
 function goalDir(projectRoot, zcodeSid) {
-  return path21.join(projectRoot, ".zcode", "scratch", "goals", zcodeSid);
+  return path22.join(projectRoot, ".zcode", "scratch", "goals", zcodeSid);
 }
 function handoffPath(projectRoot, zcodeSid) {
-  return path21.join(projectRoot, ".zcode", "handoff", `goal-${zcodeSid}.md`);
+  return path22.join(projectRoot, ".zcode", "handoff", `goal-${zcodeSid}.md`);
 }
 function statePath2(projectRoot, zcodeSid) {
-  return path21.join(goalDir(projectRoot, zcodeSid), "state.json");
+  return path22.join(goalDir(projectRoot, zcodeSid), "state.json");
 }
 function verifyPath(projectRoot, zcodeSid) {
-  return path21.join(goalDir(projectRoot, zcodeSid), "verify.txt");
+  return path22.join(goalDir(projectRoot, zcodeSid), "verify.txt");
 }
 function readGoalState(projectRoot, zcodeSid) {
   try {
@@ -39813,20 +39923,20 @@ function writeGoalState(projectRoot, zcodeSid, state2) {
   const target = statePath2(projectRoot, zcodeSid);
   const tmp = `${target}.tmp-${process.pid}`;
   try {
-    mkdirSync6(dir, { recursive: true });
-    writeFileSync5(tmp, JSON.stringify(state2, null, 2));
-    renameSync5(tmp, target);
+    mkdirSync7(dir, { recursive: true });
+    writeFileSync6(tmp, JSON.stringify(state2, null, 2));
+    renameSync6(tmp, target);
   } catch (e) {
     log(`goal-loop: state write failed (${e instanceof Error ? e.message : String(e)}) \u2014 continuing`);
     try {
-      unlinkSync2(tmp);
+      unlinkSync3(tmp);
     } catch {
     }
   }
 }
 function clearGoalState(projectRoot, zcodeSid) {
   try {
-    unlinkSync2(statePath2(projectRoot, zcodeSid));
+    unlinkSync3(statePath2(projectRoot, zcodeSid));
   } catch {
   }
 }
@@ -39922,21 +40032,21 @@ function strictVerifyPrompt(ticket, verifyFile) {
   ].join("\n");
 }
 function parseVerifyFile(content) {
-  const text = content.trim();
-  if (text === "PASS" || text.startsWith("PASS\n"))
+  const text2 = content.trim();
+  if (text2 === "PASS" || text2.startsWith("PASS\n"))
     return { pass: true };
-  const m = /^FAIL:\s*(.+)/s.exec(text);
+  const m = /^FAIL:\s*(.+)/s.exec(text2);
   if (m)
     return { pass: false, reason: m[1].trim().slice(0, 400) };
   return null;
 }
 function parseVerifyReply(reply) {
-  const text = reply.trim();
-  const m = /fail\s*:\s*(.+)/is.exec(text);
+  const text2 = reply.trim();
+  const m = /fail\s*:\s*(.+)/is.exec(text2);
   if (m)
     return { pass: false, reason: m[1].trim().slice(0, 400) };
-  const negated = /\b(not|never|cannot|can't|couldn't|didn't|doesn't|won't|fails?|failed|failing|unable)\b[^\n.]*?\bpass(ed)?\b/i.test(text) || /\bpass(ed)?\b[^\n.]*?\b(not|never|cannot)\b/i.test(text);
-  if (!negated && /\bpass(ed)?\b/i.test(text))
+  const negated = /\b(not|never|cannot|can't|couldn't|didn't|doesn't|won't|fails?|failed|failing|unable)\b[^\n.]*?\bpass(ed)?\b/i.test(text2) || /\bpass(ed)?\b[^\n.]*?\b(not|never|cannot)\b/i.test(text2);
+  if (!negated && /\bpass(ed)?\b/i.test(text2))
     return { pass: true };
   return null;
 }
@@ -39985,7 +40095,7 @@ __export(driver_exports, {
   goalCompactThreshold: () => goalCompactThreshold,
   goalMaxTurns: () => goalMaxTurns2
 });
-import { readFileSync as readFileSync17, unlinkSync as unlinkSync3 } from "node:fs";
+import { readFileSync as readFileSync17, unlinkSync as unlinkSync4 } from "node:fs";
 function goalMaxTurns2() {
   return goalMaxTurns();
 }
@@ -40152,9 +40262,9 @@ var init_driver = __esm({
        * turn is in flight). Resolves when the merged round completes — or
        * `cancelled` if the loop pauses/stops first (text preserved in state).
        */
-      parkPrompt(text) {
+      parkPrompt(text2) {
         return new Promise((resolve) => {
-          this.parked.push({ id: ++this.parkSeq, text, resolve });
+          this.parked.push({ id: ++this.parkSeq, text: text2, resolve });
           this.armKeepalive();
         });
       }
@@ -40295,9 +40405,9 @@ var init_driver = __esm({
           const m = msgs[i];
           if (m.info.role !== "assistant")
             continue;
-          const text = m.parts.filter((p) => p.type === "text").map((p) => p.text).join("");
-          if (text.trim())
-            return text;
+          const text2 = m.parts.filter((p) => p.type === "text").map((p) => p.text).join("");
+          if (text2.trim())
+            return text2;
         }
         return "";
       }
@@ -40322,8 +40432,8 @@ var init_driver = __esm({
           return 0;
         return (resp.result ?? {}).projection?.contextUsed ?? 0;
       }
-      async announce(text) {
-        await sendTextChunk(this.server.clients.broadcast(), this.acpSid, text, `goal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).catch(() => void 0);
+      async announce(text2) {
+        await sendTextChunk(this.server.clients.broadcast(), this.acpSid, text2, `goal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).catch(() => void 0);
       }
       persist() {
         writeGoalState(this.server.projectCwd(), this.zcodeSid, this.state);
@@ -40519,7 +40629,7 @@ var init_driver = __esm({
               }
             };
             try {
-              unlinkSync3(vPath);
+              unlinkSync4(vPath);
             } catch {
             }
             const vBefore = await this.lastMessageId();
@@ -40619,7 +40729,7 @@ var init_driver = __esm({
 
 // node_modules/zcode-acp-server/dist/config/mcp-discovery.js
 import { existsSync as existsSync9, readFileSync as readFileSync18, readdirSync as readdirSync4, statSync as statSync6 } from "node:fs";
-import path22 from "node:path";
+import path23 from "node:path";
 function loadMcpServers() {
   if (process.env.CINDY_GUEST_WORKSPACE === "1") return [];
   const results = [];
@@ -40653,13 +40763,13 @@ function loadMcpServers() {
       continue;
     const pluginName = pluginKey.slice(0, atIdx);
     const marketplace = pluginKey.slice(atIdx + 1);
-    const pluginDir = path22.join(zcodePluginCacheDir(), marketplace, pluginName);
+    const pluginDir = path23.join(zcodePluginCacheDir(), marketplace, pluginName);
     if (!existsSync9(pluginDir))
       continue;
     let latestVersion = "";
     try {
       for (const entry of readdirSync4(pluginDir)) {
-        const vDir = path22.join(pluginDir, entry);
+        const vDir = path23.join(pluginDir, entry);
         if (statSync6(vDir).isDirectory() && compareVersions(entry, latestVersion) > 0) {
           latestVersion = entry;
         }
@@ -40669,7 +40779,7 @@ function loadMcpServers() {
     }
     if (!latestVersion)
       continue;
-    const mcpFile = path22.join(pluginDir, latestVersion, ".mcp.json");
+    const mcpFile = path23.join(pluginDir, latestVersion, ".mcp.json");
     if (!existsSync9(mcpFile))
       continue;
     try {
@@ -40762,7 +40872,7 @@ var init_mcp_discovery = __esm({
 
 // node_modules/zcode-acp-server/dist/config/plugin-commands.js
 import { existsSync as existsSync10, readFileSync as readFileSync19, readdirSync as readdirSync5, statSync as statSync7 } from "node:fs";
-import path23 from "node:path";
+import path24 from "node:path";
 function parseFrontmatter(content) {
   const fm = {};
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
@@ -40801,28 +40911,28 @@ function loadPluginCommands() {
         continue;
       const pluginName = pluginKey.slice(0, atIdx);
       const marketplace = pluginKey.slice(atIdx + 1);
-      const marketDir = path23.join(pluginCacheDir, marketplace);
+      const marketDir = path24.join(pluginCacheDir, marketplace);
       if (!existsSync10(marketDir))
         continue;
-      const pluginDir = path23.join(marketDir, pluginName);
+      const pluginDir = path24.join(marketDir, pluginName);
       if (!existsSync10(pluginDir))
         continue;
       let latestVersion = "";
       for (const entry of readdirSync5(pluginDir)) {
-        const vDir = path23.join(pluginDir, entry);
+        const vDir = path24.join(pluginDir, entry);
         if (statSync7(vDir).isDirectory() && compareVersions(entry, latestVersion) > 0) {
           latestVersion = entry;
         }
       }
       if (!latestVersion)
         continue;
-      const commandsDir = path23.join(pluginDir, latestVersion, "commands");
+      const commandsDir = path24.join(pluginDir, latestVersion, "commands");
       if (!existsSync10(commandsDir))
         continue;
       for (const file2 of readdirSync5(commandsDir)) {
         if (!file2.endsWith(".md"))
           continue;
-        const cmdPath = path23.join(commandsDir, file2);
+        const cmdPath = path24.join(commandsDir, file2);
         const content = readFileSync19(cmdPath, "utf8");
         const fm = parseFrontmatter(content);
         const name = file2.replace(/\.md$/, "");
@@ -40852,7 +40962,7 @@ var init_plugin_commands = __esm({
 // node_modules/zcode-acp-server/dist/config/skill-discovery.js
 import { existsSync as existsSync11, readFileSync as readFileSync20, readdirSync as readdirSync6, statSync as statSync8 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import path24 from "node:path";
+import path25 from "node:path";
 import process12 from "node:process";
 function parseFrontmatter2(content) {
   const fm = {};
@@ -40899,17 +41009,17 @@ function scanSkillDir(dir, disabledPaths, results, seen) {
     return;
   }
   for (const entry of entries) {
-    const skillDir = path24.join(dir, entry);
+    const skillDir = path25.join(dir, entry);
     try {
       if (!statSync8(skillDir).isDirectory())
         continue;
     } catch {
       continue;
     }
-    const skillMd = path24.join(skillDir, "SKILL.md");
+    const skillMd = path25.join(skillDir, "SKILL.md");
     if (!existsSync11(skillMd))
       continue;
-    const absPath = path24.resolve(skillMd);
+    const absPath = path25.resolve(skillMd);
     if (disabledPaths.has(absPath))
       continue;
     const content = readFileSync20(skillMd, "utf8");
@@ -40948,8 +41058,8 @@ function loadSkillCommands() {
     log(`skill-discovery: config read failed (${e instanceof Error ? e.message : String(e)})`);
   }
   const disabledPaths = loadDisabledSkillPaths(config2);
-  scanSkillDir(path24.join(zcodeHomeDir2(), "skills"), disabledPaths, results, seen);
-  scanSkillDir(path24.join(homedir3(), ".agents", "skills"), disabledPaths, results, seen);
+  scanSkillDir(path25.join(zcodeHomeDir2(), "skills"), disabledPaths, results, seen);
+  scanSkillDir(path25.join(homedir3(), ".agents", "skills"), disabledPaths, results, seen);
   const enabledPlugins = config2?.plugins?.enabledPlugins ?? {};
   for (const [pluginKey, enabledFlag] of Object.entries(enabledPlugins)) {
     if (!enabledFlag)
@@ -40959,13 +41069,13 @@ function loadSkillCommands() {
       continue;
     const pluginName = pluginKey.slice(0, atIdx);
     const marketplace = pluginKey.slice(atIdx + 1);
-    const pluginDir = path24.join(zcodePluginCacheDir(), marketplace, pluginName);
+    const pluginDir = path25.join(zcodePluginCacheDir(), marketplace, pluginName);
     if (!existsSync11(pluginDir))
       continue;
     let latestVersion = "";
     try {
       for (const entry of readdirSync6(pluginDir)) {
-        const vDir = path24.join(pluginDir, entry);
+        const vDir = path25.join(pluginDir, entry);
         if (statSync8(vDir).isDirectory() && compareVersions(entry, latestVersion) > 0) {
           latestVersion = entry;
         }
@@ -40975,9 +41085,9 @@ function loadSkillCommands() {
     }
     if (!latestVersion)
       continue;
-    scanSkillDir(path24.join(pluginDir, latestVersion, "skills"), disabledPaths, results, seen);
+    scanSkillDir(path25.join(pluginDir, latestVersion, "skills"), disabledPaths, results, seen);
   }
-  scanSkillDir(path24.join(process12.cwd(), ".agents", "skills"), disabledPaths, results, seen);
+  scanSkillDir(path25.join(process12.cwd(), ".agents", "skills"), disabledPaths, results, seen);
   log(`skill-discovery: loaded ${results.length} skill(s)`);
   return results;
 }
@@ -40995,7 +41105,7 @@ __export(slash_exports, {
   handleSlashCommand: () => handleSlashCommand,
   neutralizeSlashText: () => neutralizeSlashText
 });
-import { randomUUID as randomUUID8 } from "node:crypto";
+import { randomUUID as randomUUID9 } from "node:crypto";
 function resumeLabel(title, updatedAt) {
   const when = updatedAt ? updatedAt.slice(0, 16).replace("T", " ") : "?";
   return `${title && title.trim() ? title.trim() : "(untitled)"} \xB7 ${when}`;
@@ -41016,8 +41126,8 @@ function knownCommandSet() {
   }
   return knownCommands;
 }
-function neutralizeSlashText(text) {
-  return text;
+function neutralizeSlashText(text2) {
+  return text2;
 }
 async function autoFlow(server, acpSid, zcodeSid, arg, label, opts = {}) {
   const { GoalLoopDriver: GoalLoopDriver2 } = await Promise.resolve().then(() => (init_driver(), driver_exports));
@@ -41159,14 +41269,14 @@ ${rows.join("\n")}${more}` : "No recent runs.");
   }
   return blocks.join("\n\n");
 }
-async function handleSlashCommand(server, cx, acpSid, zcodeSid, text, client) {
-  const stripped = text.trim();
+async function handleSlashCommand(server, cx, acpSid, zcodeSid, text2, client) {
+  const stripped = text2.trim();
   if (!stripped.startsWith("/"))
     return null;
   const parts = stripped.slice(1).split(/\s(.*)/s);
   const cmd = (parts[0] ?? "").toLowerCase();
   const arg = (parts[1] ?? "").trim();
-  const chunkMsgId = randomUUID8();
+  const chunkMsgId = randomUUID9();
   const feedback = async (msg) => {
     await sendTextChunk(cx, acpSid, msg, chunkMsgId);
   };
@@ -41370,8 +41480,8 @@ var init_slash = __esm({
 
 // node_modules/zcode-acp-server/dist/handlers/session.js
 import process13 from "node:process";
-import path25 from "node:path";
-import { randomUUID as randomUUID9 } from "node:crypto";
+import path26 from "node:path";
+import { randomUUID as randomUUID10 } from "node:crypto";
 import { realpathSync as realpathSync3 } from "node:fs";
 import { unlink as unlink2 } from "node:fs/promises";
 function workspaceFor(cwd) {
@@ -41681,7 +41791,7 @@ async function newSession(server, params, client) {
     }
   }
   const cwd = server.serveMode ? process13.cwd() : sanitizeClientCwd(params.cwd) ?? process13.cwd();
-  const acpSid = randomUUID9();
+  const acpSid = randomUUID10();
   server.pendingSessions.set(acpSid, { cwd, mcpServers: params.mcpServers });
   server.sessionCwds.set(acpSid, cwd);
   rememberSessionMcpServers(server, acpSid, params.mcpServers);
@@ -42244,7 +42354,7 @@ async function resumeIntoSession(server, cx, acpSid, zcodeTarget) {
     getOrCreateDiffer(server, zcodeTarget).diff(snapshot);
     const planEvents = new ProjectionDiffer().diffPlan(snapshot.todos ?? []);
     for (const iev of planEvents) {
-      await dispatchEvent(server, cx, acpSid, iev, `resume_${randomUUID9().slice(0, 8)}`);
+      await dispatchEvent(server, cx, acpSid, iev, `resume_${randomUUID10().slice(0, 8)}`);
     }
   } catch (e) {
     log(`/resume: initial plan read failed (non-fatal): ${e instanceof Error ? e.message : String(e)}`);
@@ -42318,7 +42428,7 @@ async function loadSession(server, params, cx, opts = {}) {
       const interrupted = prior?.status === "running";
       if (prior && (interrupted || prior.status.startsWith("paused"))) {
         server.goalLoopLoadHints.add(zcodeSid);
-        await sendTextChunk(cx, acpSid, interrupted ? messages().goalHintInterrupted(prior.objective) : messages().goalHintPaused, `goalhint_${randomUUID9().slice(0, 8)}`).catch(() => void 0);
+        await sendTextChunk(cx, acpSid, interrupted ? messages().goalHintInterrupted(prior.objective) : messages().goalHintPaused, `goalhint_${randomUUID10().slice(0, 8)}`).catch(() => void 0);
       }
     }
   }
@@ -42349,7 +42459,7 @@ async function loadSession(server, params, cx, opts = {}) {
     loadDiffer.diff(snapshot);
     const planEvents = new ProjectionDiffer().diffPlan(snapshot.todos ?? []);
     for (const iev of planEvents) {
-      await dispatchEvent(server, cx, acpSid, iev, `load_${randomUUID9().slice(0, 8)}`);
+      await dispatchEvent(server, cx, acpSid, iev, `load_${randomUUID10().slice(0, 8)}`);
     }
   } catch (e) {
     log(`session/load: initial plan read failed (non-fatal): ${e instanceof Error ? e.message : String(e)}`);
@@ -42380,11 +42490,11 @@ async function prompt(server, params, cx, requestId, client) {
       break;
     server.sandboxContinuations.delete(params.sessionId);
     try {
-      result = await runPrompt(server, { sessionId: params.sessionId, prompt: [{ type: "text", text: continuation }] }, cx, `sandbox-cont-${randomUUID9()}`, true, client);
+      result = await runPrompt(server, { sessionId: params.sessionId, prompt: [{ type: "text", text: continuation }] }, cx, `sandbox-cont-${randomUUID10()}`, true, client);
     } catch (e) {
       const err = e instanceof Error ? e.message : String(e);
       warn2(`sandbox: continuation prompt failed: ${err}`);
-      await sendTextChunk(cx, params.sessionId, messages().sandboxContinuationFailed(err), randomUUID9()).catch(() => void 0);
+      await sendTextChunk(cx, params.sessionId, messages().sandboxContinuationFailed(err), randomUUID10()).catch(() => void 0);
       await emitSessionTurnState(server, params.sessionId, false, cx);
       server.sandboxContinuations.delete(params.sessionId);
       return { stopReason: "cancelled" };
@@ -42447,13 +42557,13 @@ async function runOneTurn(server, opts) {
         }
         differ.markSeen(await fetchMessagesSinceAnchor(server, zcodeSid, differ.historyAnchor));
         if (!suppressRetryNotice) {
-          await sendTextChunk(cx, acpSid, messages().networkRetry(attempt - 1, MAX_TURN_ATTEMPTS - 1), randomUUID9());
+          await sendTextChunk(cx, acpSid, messages().networkRetry(attempt - 1, MAX_TURN_ATTEMPTS - 1), randomUUID10());
         }
         suppressRetryNotice = false;
         log(`  [retry] transient turn failed, re-sending (attempt ${attempt}/${MAX_TURN_ATTEMPTS})`);
         await sleep6(backoffMs(attempt - 1));
       }
-      const chunkMsgId = randomUUID9();
+      const chunkMsgId = randomUUID10();
       const cancelledRecently = server.lastCancelledAt.get(zcodeSid) !== void 0 && Date.now() - server.lastCancelledAt.get(zcodeSid) < DRAIN_WINDOW_MS && !server.autoCompactInFlight.has(zcodeSid);
       const drainRan = cancelledRecently && !server.observedSendBusyReject;
       if (drainRan) {
@@ -42520,7 +42630,7 @@ async function runOneTurn(server, opts) {
         const notifyActive = notifySince !== void 0 && Date.now() - notifySince < NOTIFY_TURN_STALE_MS;
         if (isBusy && server.autoCompactInFlight.has(zcodeSid)) {
           if (!turn.goalLoop) {
-            await sendTextChunk(cx, acpSid, messages().autoCompactBusy, randomUUID9());
+            await sendTextChunk(cx, acpSid, messages().autoCompactBusy, randomUUID10());
           }
           turn.compactRejected = true;
           return { stopReason: "max_turn_requests" };
@@ -42532,12 +42642,12 @@ async function runOneTurn(server, opts) {
         }
         if (isBusy && !drainRan && !queuedNoticeSent && !turn.goalLoop) {
           queuedNoticeSent = true;
-          await sendTextChunk(cx, acpSid, messages().promptQueuedBehindTurn, randomUUID9());
+          await sendTextChunk(cx, acpSid, messages().promptQueuedBehindTurn, randomUUID10());
         }
         log(`  [send] backend ${isBusy ? "busy" : "cold-start reject"} (${sendResp.error.message ?? ""}), retrying in ${SEND_RETRY_INTERVAL_MS}ms`);
       }
       if (opts.continuationRound) {
-        await sendTextChunk(cx, acpSid, messages().sandboxResumedStatus, randomUUID9());
+        await sendTextChunk(cx, acpSid, messages().sandboxResumedStatus, randomUUID10());
       }
       try {
         const gateArmed = preempted || Date.now() - (server.lastCancelledAt.get(zcodeSid) ?? 0) < CANCEL_RESIDUE_WINDOW_MS;
@@ -42573,7 +42683,7 @@ async function runOneTurn(server, opts) {
             throw turnFailureRequestError(e);
           }
           differ.markSeen(await fetchMessagesSinceAnchor(server, zcodeSid, differ.historyAnchor));
-          await sendTextChunk(cx, acpSid, messages().backendRecovered(backendLostRetries, MAX_BACKEND_LOST_RETRIES), randomUUID9());
+          await sendTextChunk(cx, acpSid, messages().backendRecovered(backendLostRetries, MAX_BACKEND_LOST_RETRIES), randomUUID10());
           suppressRetryNotice = true;
           continue;
         }
@@ -42598,7 +42708,7 @@ async function runOneTurn(server, opts) {
       throw turnFailureRequestError(new TurnFailedError(lastTurnError ?? {}));
     }
     const errMsg = formatTurnError(lastTurnError) || "turn failed after retries";
-    await sendTextChunk(cx, acpSid, messages().requestFailed(errMsg), randomUUID9());
+    await sendTextChunk(cx, acpSid, messages().requestFailed(errMsg), randomUUID10());
     return { stopReason: "end_turn" };
   } finally {
     backend.unregisterEventListener(zcodeSid, listener);
@@ -42625,7 +42735,7 @@ async function runOneTurn(server, opts) {
 async function runPrompt(server, params, cx, requestId, continuationRound = false, client) {
   await server.applySandboxFlip();
   const backend = await server.ensureBackend();
-  const { text, attachments } = await convertPromptContent(params.prompt, path25.join(zcodeHomeDir2(), "v2", "acp-attachments"));
+  const { text: text2, attachments } = await convertPromptContent(params.prompt, path26.join(zcodeHomeDir2(), "v2", "acp-attachments"));
   let stagedDiscarded = false;
   const discardStagedFiles = () => {
     if (stagedDiscarded)
@@ -42639,14 +42749,14 @@ async function runPrompt(server, params, cx, requestId, continuationRound = fals
   const promptRoot = clientConnectionRoot(client);
   const ackBootResumeTrigger = async () => {
     discardStagedFiles();
-    await sendTextChunk(cx, params.sessionId, messages().bootResumeAck, randomUUID9());
+    await sendTextChunk(cx, params.sessionId, messages().bootResumeAck, randomUUID10());
     log("session/prompt: boot-resume banner handshake acknowledged");
     await emitSessionTurnState(server, params.sessionId, false, cx);
     return { stopReason: "end_turn" };
   };
   if (server.bootResumeTriggerConnection !== null && promptRoot === server.bootResumeTriggerConnection) {
     server.bootResumeTriggerConnection = null;
-    if (text === BOOT_RESUME_TRIGGER) {
+    if (text2 === BOOT_RESUME_TRIGGER) {
       return await ackBootResumeTrigger();
     }
   } else if (
@@ -42658,7 +42768,7 @@ async function runPrompt(server, params, cx, requestId, continuationRound = fals
     // trigger verbatim is that handshake; a phone typing the same words is
     // real input (marttyConnectionRoots does not contain it) and goes to the
     // model as typed.
-    backendCapabilities(server.backendKind).bootResumeHandshake && server.bootResumeTriggerConnection === null && text === BOOT_RESUME_TRIGGER && server.marttyConnectionRoots.has(promptRoot) && !server.connectionPromptSeen.has(promptRoot)
+    backendCapabilities(server.backendKind).bootResumeHandshake && server.bootResumeTriggerConnection === null && text2 === BOOT_RESUME_TRIGGER && server.marttyConnectionRoots.has(promptRoot) && !server.connectionPromptSeen.has(promptRoot)
   ) {
     return await ackBootResumeTrigger();
   }
@@ -42678,7 +42788,7 @@ async function runPrompt(server, params, cx, requestId, continuationRound = fals
     throw error62;
   }
   const { handleSlashCommand: handleSlashCommand2, neutralizeSlashText: neutralizeSlashText2 } = await Promise.resolve().then(() => (init_slash(), slash_exports));
-  const intercepted = !params.prompt.every((block) => block.type === "text") ? null : await handleSlashCommand2(server, cx, params.sessionId, zcodeSid, text, client).catch((error62) => {
+  const intercepted = !params.prompt.every((block) => block.type === "text") ? null : await handleSlashCommand2(server, cx, params.sessionId, zcodeSid, text2, client).catch((error62) => {
     discardStagedFiles();
     throw error62;
   });
@@ -42687,7 +42797,7 @@ async function runPrompt(server, params, cx, requestId, continuationRound = fals
     await emitSessionTurnState(server, params.sessionId, false, cx);
     return intercepted;
   }
-  const sendText8 = neutralizeSlashText2(text);
+  const sendText8 = neutralizeSlashText2(text2);
   const turn = {
     zcodeSid,
     cancelled: false
@@ -42696,7 +42806,7 @@ async function runPrompt(server, params, cx, requestId, continuationRound = fals
   let parked;
   let compactBusy = false;
   if (server.autoCompactInFlight.has(zcodeSid)) {
-    await sendTextChunk(cx, params.sessionId, messages().autoCompactHeld, randomUUID9());
+    await sendTextChunk(cx, params.sessionId, messages().autoCompactHeld, randomUUID10());
     const { waitForAutoCompactIdle: waitForAutoCompactIdle2 } = await Promise.resolve().then(() => (init_auto_compact(), auto_compact_exports));
     const settled = await waitForAutoCompactIdle2(server, zcodeSid);
     if (!settled) {
@@ -42726,19 +42836,19 @@ async function runPrompt(server, params, cx, requestId, continuationRound = fals
     return parked;
   if (compactBusy) {
     discardStagedFiles();
-    await sendTextChunk(cx, params.sessionId, messages().autoCompactBusy, randomUUID9());
+    await sendTextChunk(cx, params.sessionId, messages().autoCompactBusy, randomUUID10());
     log("session/prompt: rejected \u2014 a detached auto-compact outlived its settle cap");
     await emitSessionTurnState(server, params.sessionId, false, cx);
     return { stopReason: "max_turn_requests" };
   }
   server.markSessionActive(params.sessionId);
-  if (server.titleEligibleSessions.has(params.sessionId) && text && !server.sessionTitles.has(params.sessionId)) {
-    const title = text.split(/\r\n|\r|\n/).map((l) => l.trim()).find((l) => l.length > 0)?.slice(0, 80) ?? text.slice(0, 80);
+  if (server.titleEligibleSessions.has(params.sessionId) && text2 && !server.sessionTitles.has(params.sessionId)) {
+    const title = text2.split(/\r\n|\r|\n/).map((l) => l.trim()).find((l) => l.length > 0)?.slice(0, 80) ?? text2.slice(0, 80);
     server.sessionTitles.set(params.sessionId, title);
     server.touchSessionSummary(params.sessionId, title);
     refreshTerminalTabTitle(server, params.sessionId);
     const { updateSessionTitle: updateSessionTitle2 } = await Promise.resolve().then(() => (init_tasks_index(), tasks_index_exports));
-    void updateSessionTitle2(zcodeSid, title, text);
+    void updateSessionTitle2(zcodeSid, title, text2);
     void sendSessionUpdate(cx, params.sessionId, {
       sessionUpdate: "session_info_update",
       title,
@@ -42866,7 +42976,7 @@ function acpTurnFailureData(turnError) {
 function turnFailureRequestError(error62) {
   const cause = asRecord(error62.turnError["cause"]);
   const detail = formatTurnError(cause ?? error62.turnError) || error62.message;
-  return new RequestError(-32603, `ZCode turn failed: ${detail}`, acpTurnFailureData(error62.turnError));
+  return new RequestError(-32603, `ZCode turn failed: ${detail}`, withCindyErrorMeta(acpTurnFailureData(error62.turnError), error62.turnError));
 }
 function isBackendLostRequestError(e) {
   if (!(e instanceof RequestError))
@@ -42889,7 +42999,7 @@ async function stopBackendTurn(server, zcodeSid, turn) {
   try {
     const backend = await server.ensureBackend();
     backend.send("v4/command", {
-      commandId: randomUUID9(),
+      commandId: randomUUID10(),
       clientId: "zcode-acp-server",
       sessionId: zcodeSid,
       type: "stop",
@@ -42942,7 +43052,7 @@ async function drainBackendAfterCancel(server, deps) {
     }
     if (!noticed) {
       noticed = true;
-      await sendTextChunk(cx, acpSid, messages().promptQueuedBehindTurn, randomUUID9());
+      await sendTextChunk(cx, acpSid, messages().promptQueuedBehindTurn, randomUUID10());
     }
     await sleep6(DRAIN_POLL_MS);
   }
@@ -43321,7 +43431,7 @@ async function runEventTurn(server, listener, monitor, differ, cx, acpSid, chunk
       if (line !== lastSubagentLine) {
         lastSubagentLine = line;
         try {
-          await sendTextChunk(cx, acpSid, line, randomUUID9());
+          await sendTextChunk(cx, acpSid, line, randomUUID10());
         } catch (e) {
           warn2(`subagent status line failed: ${e instanceof Error ? e.message : String(e)}`);
         }
@@ -43334,7 +43444,7 @@ async function runEventTurn(server, listener, monitor, differ, cx, acpSid, chunk
         const failed = endedDuringTurn.filter((item) => item.status === "failed").length;
         const cancelled = endedDuringTurn.filter((item) => item.status === "cancelled").length;
         try {
-          await sendTextChunk(cx, acpSid, messages().subagentEndedLine(endedTotal - subagentEndedBaseline, failed, cancelled), randomUUID9());
+          await sendTextChunk(cx, acpSid, messages().subagentEndedLine(endedTotal - subagentEndedBaseline, failed, cancelled), randomUUID10());
         } catch (e) {
           warn2(`subagent ended line failed: ${e instanceof Error ? e.message : String(e)}`);
         }
@@ -43567,7 +43677,7 @@ async function runEventTurn(server, listener, monitor, differ, cx, acpSid, chunk
         const deniedPath = extractPermDeniedPath(outputText);
         if (deniedPath) {
           const cwd = server.sessionCwds.get(acpSid);
-          const real = resolveReal(path25.isAbsolute(deniedPath) ? deniedPath : path25.resolve(cwd ?? process13.cwd(), deniedPath));
+          const real = resolveReal(path26.isAbsolute(deniedPath) ? deniedPath : path26.resolve(cwd ?? process13.cwd(), deniedPath));
           let hinted = server.fsDeniedPaths.get(acpSid);
           if (!hinted) {
             hinted = /* @__PURE__ */ new Set();
@@ -43664,9 +43774,9 @@ async function fetchLastReply(server, zcodeSid, differ) {
       for (let j = (m.parts ?? []).length - 1; j >= 0; j--) {
         const p = m.parts[j];
         if (p && typeof p === "object" && p.type === "text") {
-          const text = p.text ?? "";
-          if (text.trim())
-            return { text, messageId: m.info?.id ?? null };
+          const text2 = p.text ?? "";
+          if (text2.trim())
+            return { text: text2, messageId: m.info?.id ?? null };
         }
       }
     }
@@ -43784,6 +43894,7 @@ var BOOT_RESUME_ENV, BOOT_CREATE_BIND_ENV, BOOT_RESUME_TRIGGER, LIFECYCLE_PROBE_
 var init_session = __esm({
   "node_modules/zcode-acp-server/dist/handlers/session.js"() {
     init_modes();
+    init_errors4();
     init_acp();
     init_prompt_content();
     init_adapter();
@@ -46092,7 +46203,7 @@ var require_websocket = __commonJS({
     var net = __require("net");
     var querystring = __require("querystring");
     var tls = __require("tls");
-    var { randomBytes: randomBytes2, createHash: createHash6 } = __require("crypto");
+    var { randomBytes: randomBytes2, createHash: createHash7 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -46783,7 +46894,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash6("sha1").update(key + GUID).digest("base64");
+        const digest = createHash7("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -47168,7 +47279,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash6 } = __require("crypto");
+    var { createHash: createHash7 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -47478,7 +47589,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash6("sha1").update(key + GUID).digest("base64");
+        const digest = createHash7("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -47732,7 +47843,7 @@ init_utils();
 init_io();
 init_replay();
 init_session();
-import { randomUUID as randomUUID10 } from "node:crypto";
+import { randomUUID as randomUUID11 } from "node:crypto";
 var REWIND_COMMAND_TIMEOUT_MS = 6e4;
 var ROWS_RANGE_LIMIT = 200;
 var REWIND_STALE_RETRIES = 1;
@@ -47795,7 +47906,7 @@ function resolveRetryRow(snapshot, messageId) {
 async function sendRewindCommand(server, zcodeSid, type, payload, baseRevision, baseLogEpoch) {
   const backend = await server.ensureBackend();
   const envelope = {
-    commandId: randomUUID10(),
+    commandId: randomUUID11(),
     clientId: "zcode-acp-server",
     sessionId: zcodeSid,
     baseRevision,
@@ -47909,7 +48020,7 @@ async function retryTurn(server, params) {
 init_acp();
 init_utils();
 init_session();
-import { randomUUID as randomUUID11 } from "node:crypto";
+import { randomUUID as randomUUID12 } from "node:crypto";
 var STEERING_COMMAND_TIMEOUT_MS = 15e3;
 function promptText(prompt2) {
   if (!Array.isArray(prompt2))
@@ -47961,8 +48072,8 @@ async function steering(server, params, origin) {
     throw new RequestError(-32602, "unsupported steering priority");
   }
   const requestedDelivery = priority === "next" ? "queue" : "guide";
-  const text = promptText(params.prompt).trim();
-  if (!text)
+  const text2 = promptText(params.prompt).trim();
+  if (!text2)
     throw new RequestError(-32602, "steering prompt is empty");
   if (!await turnRunning(server, zcodeSid)) {
     log(`steering: no running turn for ${zcodeSid.slice(-8)} \u2192 promptRequired`);
@@ -47970,11 +48081,11 @@ async function steering(server, params, origin) {
   }
   const backend = await server.ensureBackend();
   const resp = await backend.request(server.nextId(), "v4/command", {
-    commandId: randomUUID11(),
+    commandId: randomUUID12(),
     clientId: "zcode-acp-server",
     sessionId: zcodeSid,
     type: "sendText",
-    payload: { text, requestedDelivery },
+    payload: { text: text2, requestedDelivery },
     issuedAt: Date.now()
   }, STEERING_COMMAND_TIMEOUT_MS);
   if (resp.error) {
@@ -48944,10 +49055,10 @@ function createSseBodySource(lease) {
       keepAliveTimer = void 0;
     }
   };
-  const enqueueText = (controller, text) => {
+  const enqueueText = (controller, text2) => {
     isReaderWaiting = false;
     try {
-      controller.enqueue(encoder.encode(text));
+      controller.enqueue(encoder.encode(text2));
       return true;
     } catch {
       return false;
@@ -49175,12 +49286,12 @@ var WebSocketServerSession = class {
     if (this.isClosed) {
       return;
     }
-    const text = webSocketMessageToString(args);
-    if (text === void 0) {
+    const text2 = webSocketMessageToString(args);
+    if (text2 === void 0) {
       console.warn("Ignoring non-text ACP WebSocket frame");
       return;
     }
-    const size = text.length + WAITING_FRAME_OVERHEAD;
+    const size = text2.length + WAITING_FRAME_OVERHEAD;
     const { limits } = this.options.registry;
     if (this.waitingInboundBytes > 0 && size > limits.maxBufferedBytes - this.waitingInboundBytes) {
       this.closeForLimit(connectionLimitExceeded("maxBufferedBytes", limits));
@@ -49189,7 +49300,7 @@ var WebSocketServerSession = class {
     this.waitingInboundBytes += size;
     const handled = this.messageChain.then(() => {
       this.waitingInboundBytes -= size;
-      return this.handleSocketMessage(text);
+      return this.handleSocketMessage(text2);
     });
     this.messageChain = handled.catch((error62) => {
       if (this.isClosed || error62 instanceof ConnectionClosedError) {
@@ -49203,13 +49314,13 @@ var WebSocketServerSession = class {
       void this.shutdown(1011, "Message handling failed");
     });
   }
-  async handleSocketMessage(text) {
+  async handleSocketMessage(text2) {
     if (this.isClosed) {
       return;
     }
     let value;
     try {
-      value = JSON.parse(text);
+      value = JSON.parse(text2);
     } catch {
       await this.waitForSocketCapacity();
       this.send(protocolErrorResponse(RequestError.parseError()));
@@ -50374,7 +50485,7 @@ init_utils();
 import { spawn as spawn3, execFileSync as execFileSync2 } from "node:child_process";
 import { existsSync as existsSync12 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
-import path26 from "node:path";
+import path27 from "node:path";
 import process14 from "node:process";
 var MIN_BUN = { major: 1, minor: 4 };
 function whichSync2(bin) {
@@ -50390,7 +50501,7 @@ function whichSync2(bin) {
 }
 function bunCandidates() {
   const cands = [
-    path26.join(homedir4(), ".bun", "bin", "bun"),
+    path27.join(homedir4(), ".bun", "bin", "bun"),
     // official installer default
     "/opt/homebrew/bin/bun",
     "/usr/local/bin/bun"
@@ -50504,7 +50615,7 @@ function readCodeFingerprint(distDir) {
 import { createReadStream } from "node:fs";
 import { readdir as readdir3, realpath, stat as stat3 } from "node:fs/promises";
 import { createInterface as createInterface2 } from "node:readline";
-import path27 from "node:path";
+import path28 from "node:path";
 var LIST_ENTRY_LIMIT = 2e3;
 var DEFAULT_LINE_LIMIT = 200;
 var MAX_LINE_LIMIT = 5e3;
@@ -50566,7 +50677,7 @@ var MIME_BY_EXT = {
   ".ttf": "font/ttf"
 };
 function mimeFor(file2) {
-  return MIME_BY_EXT[path27.extname(file2).toLowerCase()] ?? "application/octet-stream";
+  return MIME_BY_EXT[path28.extname(file2).toLowerCase()] ?? "application/octet-stream";
 }
 function contentDisposition(name, attachment) {
   const ascii = name.replace(/["\\]/g, "_").replace(/[^\x20-\x7e]/g, "_");
@@ -50611,7 +50722,7 @@ async function sessionRoot(server, sessionId, res) {
   }
 }
 async function resolveInside(root, rel, res) {
-  const target = rel ? path27.resolve(root, rel) : root;
+  const target = rel ? path28.resolve(root, rel) : root;
   let real;
   try {
     real = await realpath(target);
@@ -50620,7 +50731,7 @@ async function resolveInside(root, rel, res) {
     sendText(res, code === "ENOENT" ? 404 : 403, code === "ENOENT" ? "not found" : "unreadable");
     return null;
   }
-  if (real !== root && !real.startsWith(root + path27.sep)) {
+  if (real !== root && !real.startsWith(root + path28.sep)) {
     sendText(res, 403, "path escapes session root");
     return null;
   }
@@ -50659,7 +50770,7 @@ async function handleList(server, url2, res, head) {
     let mtime = 0;
     if (kind !== "symlink") {
       try {
-        const s = await stat3(path27.join(dir, d.name));
+        const s = await stat3(path28.join(dir, d.name));
         size = s.size;
         mtime = s.mtimeMs;
       } catch {
@@ -50684,13 +50795,13 @@ async function streamLines(req, res, file2, line, limit) {
     aborted2 = true;
   });
   try {
-    for await (const text of rl) {
+    for await (const text2 of rl) {
       if (aborted2)
         return;
       n += 1;
       if (n < line)
         continue;
-      lines.push(text);
+      lines.push(text2);
       if (lines.length >= limit)
         break;
     }
@@ -50755,7 +50866,7 @@ async function handleFile(server, req, url2, res, head) {
   if (head) {
     const headers2 = {
       "Content-Type": mime2,
-      "Content-Disposition": contentDisposition(path27.basename(file2), url2.searchParams.get("dl") === "1")
+      "Content-Disposition": contentDisposition(path28.basename(file2), url2.searchParams.get("dl") === "1")
     };
     if (hasByte) {
       headers2["Content-Range"] = `bytes ${start}-${end}/${s.size}`;
@@ -50774,7 +50885,7 @@ async function handleFile(server, req, url2, res, head) {
   req.on("close", () => stream.destroy());
   const headers = {
     "Content-Type": mime2,
-    "Content-Disposition": contentDisposition(path27.basename(file2), url2.searchParams.get("dl") === "1")
+    "Content-Disposition": contentDisposition(path28.basename(file2), url2.searchParams.get("dl") === "1")
   };
   if (hasByte) {
     headers["Content-Range"] = `bytes ${start}-${end}/${s.size}`;
@@ -50981,7 +51092,7 @@ function createSessionCloseHandler(server) {
 init_user_config();
 init_tasks_index();
 init_utils();
-import { randomUUID as randomUUID13 } from "node:crypto";
+import { randomUUID as randomUUID14 } from "node:crypto";
 
 // node_modules/zcode-acp-server/dist/remote/session-list-endpoint.js
 init_session();
@@ -50992,13 +51103,13 @@ init_workflow_gate();
 init_session();
 init_lazy_sessions();
 init_utils();
-import { randomUUID as randomUUID12 } from "node:crypto";
+import { randomUUID as randomUUID13 } from "node:crypto";
 
 // node_modules/zcode-acp-server/dist/workflow/list-watch.js
 init_utils();
 import { watch } from "node:fs";
 import { homedir as homedir5 } from "node:os";
-import path28 from "node:path";
+import path29 from "node:path";
 var WORKFLOW_LIST_CHANGED = "$/zcode/workflowListChanged";
 var DEBOUNCE_MS = 1500;
 var watched = /* @__PURE__ */ new Set();
@@ -51014,8 +51125,8 @@ function ping(server) {
 }
 function armWorkflowListWatch(server) {
   const dirs = [
-    path28.join(server.projectCwd(), ".zcode", "workflows"),
-    path28.join(homedir5(), ".zcode", "workflows")
+    path29.join(server.projectCwd(), ".zcode", "workflows"),
+    path29.join(homedir5(), ".zcode", "workflows")
   ];
   let bound = false;
   for (const dir of dirs) {
@@ -51042,13 +51153,13 @@ init_atomic_write();
 
 // node_modules/zcode-acp-server/dist/settings/workflow-run-dismissals.js
 init_utils();
-import { existsSync as existsSync13, mkdirSync as mkdirSync7, readFileSync as readFileSync22, renameSync as renameSync6, writeFileSync as writeFileSync6 } from "node:fs";
-import path29 from "node:path";
+import { existsSync as existsSync13, mkdirSync as mkdirSync8, readFileSync as readFileSync22, renameSync as renameSync7, writeFileSync as writeFileSync7 } from "node:fs";
+import path30 from "node:path";
 import process16 from "node:process";
 var STORE_FILENAME3 = "acp-workflow-run-dismissals.json";
 var TTL_MS6 = 365 * 24 * 60 * 60 * 1e3;
 function storePath3() {
-  return path29.join(zcodeHomeDir2(), "v2", STORE_FILENAME3);
+  return path30.join(zcodeHomeDir2(), "v2", STORE_FILENAME3);
 }
 function readTable3() {
   try {
@@ -51071,11 +51182,11 @@ function readTable3() {
 function persist4(table) {
   try {
     const p = storePath3();
-    const dir = path29.dirname(p);
-    mkdirSync7(dir, { recursive: true });
+    const dir = path30.dirname(p);
+    mkdirSync8(dir, { recursive: true });
     const tmp = `${p}.tmp-${process16.pid}`;
-    writeFileSync6(tmp, JSON.stringify(table, null, 2));
-    renameSync6(tmp, p);
+    writeFileSync7(tmp, JSON.stringify(table, null, 2));
+    renameSync7(tmp, p);
   } catch (e) {
     warn2(`workflow-run-dismissals: store write failed (${e instanceof Error ? e.message : String(e)}) \u2014 the dismissal will not stick`);
   }
@@ -51370,7 +51481,7 @@ function reasonToken(reasonCode, status) {
 async function sendCommand(server, type, zcodeSid, payload) {
   const backend = await server.ensureBackend();
   const envelope = {
-    commandId: randomUUID12(),
+    commandId: randomUUID13(),
     clientId: "zcode-acp-server",
     sessionId: zcodeSid,
     type,
@@ -51422,7 +51533,7 @@ async function startSavedWorkflow(server, input2) {
   if (input2.acpSessionId) {
     zcodeSid = await mapProvidedSession(server, input2.acpSessionId);
   } else {
-    createdAcpSid = randomUUID12();
+    createdAcpSid = randomUUID13();
     const cwd = server.projectCwd();
     server.pendingSessions.set(createdAcpSid, { cwd });
     server.sessionCwds.set(createdAcpSid, cwd);
@@ -51854,7 +51965,7 @@ async function purgeSessionBytes(server, sessionId) {
       sessionId,
       workspace: { workspacePath },
       revision: preview.revision,
-      operationId: randomUUID13()
+      operationId: randomUUID14()
     }, DELETION_RPC_TIMEOUT_MS);
     if (resp.error) {
       return { kind: "degraded", reason: `execute failed: ${resp.error.message ?? "unknown"}` };
@@ -52322,8 +52433,8 @@ async function resolveTarget(providerId, modelId) {
   void modelId;
   return { target: { baseUrl, apiKey, apiType } };
 }
-function joinUrl(baseUrl, path33) {
-  return `${baseUrl.replace(/\/+$/u, "")}/${path33.replace(/^\/+/u, "")}`;
+function joinUrl(baseUrl, path34) {
+  return `${baseUrl.replace(/\/+$/u, "")}/${path34.replace(/^\/+/u, "")}`;
 }
 function buildProbeRequest(target, modelId) {
   const prompt2 = "ping";
@@ -52365,8 +52476,8 @@ function buildProbeRequest(target, modelId) {
     }
   };
 }
-function summariseError(status, text) {
-  const trimmed = text.trim();
+function summariseError(status, text2) {
+  const trimmed = text2.trim();
   if (!trimmed)
     return `HTTP ${status}`;
   try {
@@ -52394,11 +52505,11 @@ async function testModelConnectivity(providerId, modelId, fetchImpl = globalThis
     const elapsedMs = Date.now() - started;
     if (response.ok)
       return { success: true, status: response.status, elapsedMs };
-    const text = await response.text().catch(() => "");
+    const text2 = await response.text().catch(() => "");
     return {
       success: false,
       status: response.status,
-      message: summariseError(response.status, text),
+      message: summariseError(response.status, text2),
       elapsedMs
     };
   } catch (error62) {
@@ -52659,7 +52770,7 @@ async function updateHookEntry(event, matcherIndex, hookIndex, patch) {
 init_atomic_write();
 init_utils();
 import { mkdir as mkdir5, readFile as readFile4, readdir as readdir4, rm as rm4, stat as stat4, writeFile as writeFile4 } from "node:fs/promises";
-import path30 from "node:path";
+import path31 from "node:path";
 var AGENT_COLORS = [
   "red",
   "blue",
@@ -52909,7 +53020,7 @@ async function listAgentFiles() {
     if (!entry.endsWith(".md") && !entry.endsWith(".markdown"))
       continue;
     try {
-      if ((await stat4(path30.join(dir, entry))).isFile())
+      if ((await stat4(path31.join(dir, entry))).isFile())
         out.push(entry);
     } catch {
     }
@@ -52932,7 +53043,7 @@ async function listAgents() {
   }));
   const dir = zcodeAgentsDir();
   for (const fileName of await listAgentFiles()) {
-    const filePath = path30.join(dir, fileName);
+    const filePath = path31.join(dir, fileName);
     let content;
     try {
       content = await readFile4(filePath, "utf8");
@@ -52968,10 +53079,10 @@ function resolveAgentFile(name) {
     throw new Error(`invalid agent name '${name}' \u2014 3-50 characters of letters, digits and hyphens`);
   }
   const dir = zcodeAgentsDir();
-  const filePath = path30.join(dir, agentFileName(name));
-  const resolvedDir = path30.resolve(dir);
-  const resolved = path30.resolve(filePath);
-  if (path30.dirname(resolved) !== resolvedDir) {
+  const filePath = path31.join(dir, agentFileName(name));
+  const resolvedDir = path31.resolve(dir);
+  const resolved = path31.resolve(filePath);
+  if (path31.dirname(resolved) !== resolvedDir) {
     throw new Error(`agent path escapes the agents directory: ${name}`);
   }
   return filePath;
@@ -53026,7 +53137,7 @@ async function createAgent(input2) {
     throw new Error(`color must be one of ${AGENT_COLORS.join(", ")}`);
   }
   validateAdvanced(input2);
-  await mkdir5(path30.dirname(filePath), { recursive: true });
+  await mkdir5(path31.dirname(filePath), { recursive: true });
   const frontmatter = {
     name: input2.name,
     description: input2.description
@@ -53199,29 +53310,29 @@ async function deleteAgent(name) {
 // node_modules/zcode-acp-server/dist/settings/skills.js
 import { cp, mkdir as mkdir6, readFile as readFile5, realpath as realpath2, rm as rm5, stat as stat5 } from "node:fs/promises";
 import { homedir as homedir6 } from "node:os";
-import path31 from "node:path";
+import path32 from "node:path";
 init_utils();
 function skillRoots() {
   const home = zcodeHomeDir2();
   return [
-    { dir: path31.join(home, "skills"), scope: "user", deletable: true },
-    { dir: path31.join(homedir6(), ".agents", "skills"), scope: "agents", deletable: true },
-    { dir: path31.join(home, "cli", "plugins", "cache"), scope: "plugin", deletable: false }
+    { dir: path32.join(home, "skills"), scope: "user", deletable: true },
+    { dir: path32.join(homedir6(), ".agents", "skills"), scope: "agents", deletable: true },
+    { dir: path32.join(home, "cli", "plugins", "cache"), scope: "plugin", deletable: false }
   ];
 }
 function userSkillsRoot() {
-  return path31.join(zcodeHomeDir2(), "skills");
+  return path32.join(zcodeHomeDir2(), "skills");
 }
 async function resolveReal2(target) {
   try {
     return await realpath2(target);
   } catch {
-    return path31.resolve(target);
+    return path32.resolve(target);
   }
 }
 async function isInside(target, root) {
-  const rel = path31.relative(await resolveReal2(root), await resolveReal2(target));
-  return rel === "" || !rel.startsWith(`..${path31.sep}`) && rel !== ".." && !path31.isAbsolute(rel);
+  const rel = path32.relative(await resolveReal2(root), await resolveReal2(target));
+  return rel === "" || !rel.startsWith(`..${path32.sep}`) && rel !== ".." && !path32.isAbsolute(rel);
 }
 function parseSkillFrontmatter(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
@@ -53242,7 +53353,7 @@ function parseSkillFrontmatter(content) {
 }
 async function disabledSkillPaths() {
   try {
-    const raw = await readFile5(path31.join(zcodeHomeDir2(), "cli", "config.json"), "utf8");
+    const raw = await readFile5(path32.join(zcodeHomeDir2(), "cli", "config.json"), "utf8");
     const parsed = JSON.parse(raw);
     const out = /* @__PURE__ */ new Set();
     for (const [key, value] of Object.entries(parsed.skills ?? {})) {
@@ -53265,8 +53376,8 @@ async function listSkills() {
       continue;
     }
     for (const entry of entries) {
-      const dir = path31.join(root.dir, entry);
-      const skillMd = path31.join(dir, "SKILL.md");
+      const dir = path32.join(root.dir, entry);
+      const skillMd = path32.join(dir, "SKILL.md");
       try {
         if (!(await stat5(dir)).isDirectory())
           continue;
@@ -53285,7 +53396,7 @@ async function listSkills() {
         continue;
       if (fm["user-invocable"] === "false")
         continue;
-      const absPath = path31.resolve(skillMd);
+      const absPath = path32.resolve(skillMd);
       out.push({
         name,
         description: fm["description"],
@@ -53312,16 +53423,16 @@ async function setSkillEnabledByPath(skillPath, enable) {
   await setSkillEnabled(skillPath.replace(/\\/gu, "/"), enable);
 }
 function assertSkillPath(skillPath) {
-  if (!path31.isAbsolute(skillPath)) {
+  if (!path32.isAbsolute(skillPath)) {
     throw new Error("skill path must be absolute");
   }
-  if (path31.basename(skillPath) !== "SKILL.md") {
+  if (path32.basename(skillPath) !== "SKILL.md") {
     throw new Error("skill path must point at a SKILL.md file");
   }
 }
 async function deleteSkill(skillPath) {
   assertSkillPath(skillPath);
-  const dir = path31.dirname(skillPath);
+  const dir = path32.dirname(skillPath);
   const roots = skillRoots().filter((r) => r.deletable);
   let root;
   for (const candidate of roots) {
@@ -53340,7 +53451,7 @@ async function deleteSkill(skillPath) {
 }
 async function copySkillToUser(skillPath) {
   assertSkillPath(skillPath);
-  const sourceDir = path31.dirname(skillPath);
+  const sourceDir = path32.dirname(skillPath);
   let owned = false;
   for (const root of skillRoots()) {
     if (root.scope !== "plugin" && await isInside(sourceDir, root.dir)) {
@@ -53352,8 +53463,8 @@ async function copySkillToUser(skillPath) {
     throw new Error("only skills under the user skill roots can be copied");
   }
   const targetRoot = userSkillsRoot();
-  const name = path31.basename(sourceDir);
-  const target = path31.join(targetRoot, name);
+  const name = path32.basename(sourceDir);
+  const target = path32.join(targetRoot, name);
   if (await resolveReal2(target) === await resolveReal2(sourceDir)) {
     throw new Error("this skill already lives in the user skills root");
   }
@@ -53368,7 +53479,7 @@ async function copySkillToUser(skillPath) {
   await mkdir6(targetRoot, { recursive: true });
   await cp(sourceDir, target, { recursive: true });
   log(`settings: copied skill '${name}' to ${target}`);
-  return path31.join(target, "SKILL.md");
+  return path32.join(target, "SKILL.md");
 }
 
 // node_modules/zcode-acp-server/dist/remote/settings-endpoint.js
@@ -53546,7 +53657,7 @@ init_workflow_gate();
 init_credential_store();
 init_utils();
 init_errors3();
-import { randomUUID as randomUUID14 } from "node:crypto";
+import { randomUUID as randomUUID15 } from "node:crypto";
 import { readFile as readFile6 } from "node:fs/promises";
 var CODING_PLAN_PROVIDER_PREFIX = "account:";
 var ZCODE_JWT_KEY = "zcodejwttoken";
@@ -53628,8 +53739,8 @@ function resetHeaders(auth, includeScope) {
   }
   return headers;
 }
-async function callReset(path33, init, auth, acceptedCodes = [], fetchImpl = globalThis.fetch, env = process.env) {
-  const response = await fetchImpl(`${apiOrigin4(env)}${path33}`, {
+async function callReset(path34, init, auth, acceptedCodes = [], fetchImpl = globalThis.fetch, env = process.env) {
+  const response = await fetchImpl(`${apiOrigin4(env)}${path34}`, {
     method: init.method,
     headers: {
       ...resetHeaders(auth, init.includeScope),
@@ -53679,7 +53790,7 @@ async function readResetStatus(providerId, fetchImpl = globalThis.fetch, env = p
     latestFiveHour: readHistory("latest_five_hour_reset_history"),
     latestWeek: readHistory("latest_week_reset_history"),
     hasUnreadHistory: data["has_unread_history"] === true,
-    nonce: randomUUID14()
+    nonce: randomUUID15()
   };
 }
 async function useResetCard(providerId, resetType, idempotencyKey, fetchImpl = globalThis.fetch, env = process.env) {
@@ -53742,13 +53853,13 @@ async function fetchMonitorResponse(endpoint, search, fetchImpl = globalThis.fet
     },
     signal: AbortSignal.timeout(TIMEOUT_MS6)
   });
-  const text = await resp.text();
+  const text2 = await resp.text();
   let json2 = null;
   try {
-    json2 = text ? JSON.parse(text) : null;
+    json2 = text2 ? JSON.parse(text2) : null;
   } catch {
   }
-  return { status: resp.status, json: json2, text };
+  return { status: resp.status, json: json2, text: text2 };
 }
 
 // node_modules/zcode-acp-server/dist/quota/platform-usage.js
@@ -54133,10 +54244,10 @@ async function readBody2(req) {
   }
   if (chunks.length === 0)
     return {};
-  const text = Buffer.concat(chunks).toString("utf8");
+  const text2 = Buffer.concat(chunks).toString("utf8");
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(text2);
   } catch {
     throw new Error("request body is not valid JSON");
   }
@@ -54198,8 +54309,8 @@ function statusFor(error62) {
 function createSettingsHandler(server) {
   return (req, res) => {
     const url2 = new URL(req.url ?? "/", "http://127.0.0.1");
-    const path33 = url2.pathname.replace(/^\/api/u, "").replace(/\/+$/u, "") || "/";
-    void route(req, res, url2, path33, server ?? null).catch((error62) => {
+    const path34 = url2.pathname.replace(/^\/api/u, "").replace(/\/+$/u, "") || "/";
+    void route(req, res, url2, path34, server ?? null).catch((error62) => {
       if (error62 instanceof BadRequest) {
         if (!res.writableEnded)
           sendError(res, 400, error62.message);
@@ -54211,62 +54322,62 @@ function createSettingsHandler(server) {
     });
   };
 }
-async function route(req, res, url2, path33, server) {
+async function route(req, res, url2, path34, server) {
   const method = req.method ?? "GET";
   const caps = backendCapabilities(server?.backendKind ?? "zcode");
-  const workflowRoute = path33 === "/settings/workflows" || path33 === "/settings/workflow-gate" || path33 === "/settings/workflow-create-prompt" || path33 === "/settings/workflow-runs" || path33.startsWith("/settings/workflows/") || path33.startsWith("/settings/workflow-runs/");
+  const workflowRoute = path34 === "/settings/workflows" || path34 === "/settings/workflow-gate" || path34 === "/settings/workflow-create-prompt" || path34 === "/settings/workflow-runs" || path34.startsWith("/settings/workflows/") || path34.startsWith("/settings/workflow-runs/");
   if (workflowRoute && !caps.workflowRoutes)
     return sendError(res, 404, "not found");
-  if (path33 === "/settings/backend/restart" && !caps.backendRestart) {
+  if (path34 === "/settings/backend/restart" && !caps.backendRestart) {
     return sendError(res, 404, "not found");
   }
-  if (!workflowRoute && path33 !== "/settings/backend/restart" && !caps.settings) {
+  if (!workflowRoute && path34 !== "/settings/backend/restart" && !caps.settings) {
     return sendError(res, 404, "not found");
   }
   if (method === "GET") {
-    if (path33 === "/settings/all")
+    if (path34 === "/settings/all")
       return void await handleAll(res, server);
-    if (path33 === "/settings/models")
+    if (path34 === "/settings/models")
       return void await handleModels(res);
-    if (path33 === "/settings/skills")
+    if (path34 === "/settings/skills")
       return void await handleSkills(res);
-    if (path33 === "/settings/mcp")
+    if (path34 === "/settings/mcp")
       return void await handleMcp(res);
-    if (path33 === "/settings/hooks")
+    if (path34 === "/settings/hooks")
       return void await handleHooks(res);
-    if (path33 === "/settings/agents")
+    if (path34 === "/settings/agents")
       return void await handleAgents(res);
-    if (path33 === "/settings/backups")
+    if (path34 === "/settings/backups")
       return void await handleBackups(res);
-    if (path33 === "/settings/usage")
+    if (path34 === "/settings/usage")
       return void await handleUsage(res, url2);
-    if (path33 === "/settings/usage-platform")
+    if (path34 === "/settings/usage-platform")
       return void await handleUsagePlatform(res, url2);
-    if (path33 === "/settings/quota")
+    if (path34 === "/settings/quota")
       return void await handleQuota(res);
-    if (path33 === "/settings/reset-cards")
+    if (path34 === "/settings/reset-cards")
       return void await handleResetCards(res, url2);
-    if (path33 === "/settings/pending-restart")
+    if (path34 === "/settings/pending-restart")
       return void await handlePendingRestart(res, server);
-    if (path33 === "/settings/app-update")
+    if (path34 === "/settings/app-update")
       return void await handleAppUpdate(res, url2);
-    if (path33 === "/settings/workflows")
+    if (path34 === "/settings/workflows")
       return void await handleWorkflowList(res, server, url2);
-    if (path33 === "/settings/workflows/runs")
+    if (path34 === "/settings/workflows/runs")
       return void await handleWorkflowRuns(res, server, url2);
-    if (path33 === "/settings/workflow-create-prompt") {
+    if (path34 === "/settings/workflow-create-prompt") {
       return void await handleWorkflowCreatePrompt(res, server, url2);
     }
-    if (path33 === "/settings/workflow-runs") {
+    if (path34 === "/settings/workflow-runs") {
       return void await handleConversationRuns(res, server, url2);
     }
-    if (path33.startsWith("/settings/workflows/")) {
-      const parts = path33.slice("/settings/workflows/".length).split("/").map(segment);
+    if (path34.startsWith("/settings/workflows/")) {
+      const parts = path34.slice("/settings/workflows/".length).split("/").map(segment);
       if (parts.length === 2)
         return void await handleWorkflowGet(res, server, parts[0], parts[1]);
     }
-    if (path33.startsWith("/settings/workflow-runs/")) {
-      const parts = path33.slice("/settings/workflow-runs/".length).split("/").map(segment);
+    if (path34.startsWith("/settings/workflow-runs/")) {
+      const parts = path34.slice("/settings/workflow-runs/".length).split("/").map(segment);
       if (parts.length === 2 && parts[1] === "events") {
         return void await handleRunEvents(res, server, url2, parts[0]);
       }
@@ -54298,21 +54409,21 @@ async function route(req, res, url2, path33, server) {
         return;
       }
     }
-    if (method === "PUT" && path33 === "/settings/workflow-gate") {
+    if (method === "PUT" && path34 === "/settings/workflow-gate") {
       return void await handleWorkflowGateSet(res, server, body);
     }
-    if (method === "PUT" && path33.startsWith("/settings/providers/")) {
-      const id = segment(path33.slice("/settings/providers/".length));
+    if (method === "PUT" && path34.startsWith("/settings/providers/")) {
+      const id = segment(path34.slice("/settings/providers/".length));
       return void await handleUpdateProvider(res, id, body);
     }
-    if (method === "POST" && path33 === "/settings/models") {
+    if (method === "POST" && path34 === "/settings/models") {
       return void await handleUpsertModel(res, body);
     }
-    if (method === "POST" && path33 === "/settings/models/test") {
+    if (method === "POST" && path34 === "/settings/models/test") {
       return void await handleModelTest(res, body);
     }
-    if (method === "DELETE" && path33.startsWith("/settings/models/")) {
-      const rest = path33.slice("/settings/models/".length);
+    if (method === "DELETE" && path34.startsWith("/settings/models/")) {
+      const rest = path34.slice("/settings/models/".length);
       const sep = rest.indexOf("/");
       if (sep <= 0)
         return sendError(res, 400, "expected /settings/models/{providerId}/{modelId}");
@@ -54320,34 +54431,34 @@ async function route(req, res, url2, path33, server) {
       const modelId = segment(rest.slice(sep + 1));
       return void await handleRemoveModel(res, providerId, modelId);
     }
-    if (method === "POST" && path33 === "/settings/skills/enable") {
+    if (method === "POST" && path34 === "/settings/skills/enable") {
       return void await handleSkillEnable(res, body);
     }
-    if (method === "POST" && path33 === "/settings/skills/copy-to-user") {
+    if (method === "POST" && path34 === "/settings/skills/copy-to-user") {
       return void await handleSkillCopy(res, body);
     }
-    if (method === "DELETE" && path33.startsWith("/settings/skills/")) {
-      const skillPath = segment(path33.slice("/settings/skills/".length));
+    if (method === "DELETE" && path34.startsWith("/settings/skills/")) {
+      const skillPath = segment(path34.slice("/settings/skills/".length));
       return void await handleSkillDelete(res, skillPath);
     }
-    if (method === "PUT" && path33.startsWith("/settings/mcp/")) {
-      const name = segment(path33.slice("/settings/mcp/".length));
+    if (method === "PUT" && path34.startsWith("/settings/mcp/")) {
+      const name = segment(path34.slice("/settings/mcp/".length));
       return void await handleMcpUpsert(res, name, body);
     }
-    if (method === "DELETE" && path33.startsWith("/settings/mcp/")) {
-      const name = segment(path33.slice("/settings/mcp/".length));
+    if (method === "DELETE" && path34.startsWith("/settings/mcp/")) {
+      const name = segment(path34.slice("/settings/mcp/".length));
       return void await guard(res, async () => {
         await removeMcpServer(name);
         return { ok: true, effect: "needs-restart" };
       });
     }
-    if (method === "POST" && path33 === "/settings/mcp/enable") {
+    if (method === "POST" && path34 === "/settings/mcp/enable") {
       return void await handleMcpEnable(res, body);
     }
-    if (method === "PUT" && path33.startsWith("/settings/hooks/")) {
-      return void await handleHookUpdate(res, path33.slice("/settings/hooks/".length), body);
+    if (method === "PUT" && path34.startsWith("/settings/hooks/")) {
+      return void await handleHookUpdate(res, path34.slice("/settings/hooks/".length), body);
     }
-    if (method === "POST" && path33 === "/settings/hooks/enabled") {
+    if (method === "POST" && path34 === "/settings/hooks/enabled") {
       const enabled = bool(body, "enabled");
       if (enabled === void 0)
         return sendError(res, 400, "enabled (boolean) is required");
@@ -54356,99 +54467,99 @@ async function route(req, res, url2, path33, server) {
         return { ok: true, effect: "needs-restart" };
       });
     }
-    if ((method === "POST" || method === "PUT") && path33.startsWith("/settings/agents/") && path33.endsWith("/enable")) {
-      const name = segment(path33.slice("/settings/agents/".length, -"/enable".length));
+    if ((method === "POST" || method === "PUT") && path34.startsWith("/settings/agents/") && path34.endsWith("/enable")) {
+      const name = segment(path34.slice("/settings/agents/".length, -"/enable".length));
       return void await handleAgentEnable(res, name, body);
     }
-    if (method === "PUT" && path33.startsWith("/settings/agents/")) {
-      const name = segment(path33.slice("/settings/agents/".length));
+    if (method === "PUT" && path34.startsWith("/settings/agents/")) {
+      const name = segment(path34.slice("/settings/agents/".length));
       return void await handleAgentUpsert(res, name, body);
     }
-    if (method === "DELETE" && path33.startsWith("/settings/agents/")) {
-      const name = segment(path33.slice("/settings/agents/".length));
+    if (method === "DELETE" && path34.startsWith("/settings/agents/")) {
+      const name = segment(path34.slice("/settings/agents/".length));
       return void await guard(res, async () => {
         await deleteAgent(name);
         return { ok: true, effect: "needs-restart" };
       });
     }
-    if (method === "POST" && path33 === "/settings/backups/restore") {
+    if (method === "POST" && path34 === "/settings/backups/restore") {
       return void await handleBackupRestore(res, body);
     }
-    if (method === "POST" && path33 === "/settings/reset-cards/use") {
+    if (method === "POST" && path34 === "/settings/reset-cards/use") {
       return void await handleResetUse(res, body);
     }
-    if (method === "POST" && path33 === "/settings/reset-cards/opportunity") {
+    if (method === "POST" && path34 === "/settings/reset-cards/opportunity") {
       return void await handleResetOpportunity(res, body);
     }
-    if (method === "POST" && path33 === "/settings/reset-cards/history-read") {
+    if (method === "POST" && path34 === "/settings/reset-cards/history-read") {
       return void await handleResetHistoryRead(res, body);
     }
-    if (method === "POST" && path33 === "/settings/backend/restart") {
+    if (method === "POST" && path34 === "/settings/backend/restart") {
       return void await handleBackendRestart(res, server);
     }
-    if (method === "POST" && path33 === "/settings/app-update/install") {
+    if (method === "POST" && path34 === "/settings/app-update/install") {
       return void await handleAppUpdateInstall(res, body);
     }
-    if (method === "PUT" && path33.startsWith("/settings/workflows/") && path33.endsWith("/meta")) {
-      const rest = path33.slice("/settings/workflows/".length, -"/meta".length);
+    if (method === "PUT" && path34.startsWith("/settings/workflows/") && path34.endsWith("/meta")) {
+      const rest = path34.slice("/settings/workflows/".length, -"/meta".length);
       const parts = rest.split("/").map(segment);
       if (parts.length !== 2) {
         return sendError(res, 400, "expected /settings/workflows/{scope}/{name}/meta");
       }
       return void await handleWorkflowMeta(res, server, parts[0], parts[1], body);
     }
-    if (method === "DELETE" && path33.startsWith("/settings/workflows/")) {
-      const parts = path33.slice("/settings/workflows/".length).split("/").map(segment);
+    if (method === "DELETE" && path34.startsWith("/settings/workflows/")) {
+      const parts = path34.slice("/settings/workflows/".length).split("/").map(segment);
       if (parts.length !== 2) {
         return sendError(res, 400, "expected /settings/workflows/{scope}/{name}");
       }
       return void await handleWorkflowDelete(res, server, parts[0], parts[1]);
     }
-    if (method === "POST" && path33.startsWith("/settings/workflows/") && path33.endsWith("/move")) {
-      const rest = path33.slice("/settings/workflows/".length, -"/move".length);
+    if (method === "POST" && path34.startsWith("/settings/workflows/") && path34.endsWith("/move")) {
+      const rest = path34.slice("/settings/workflows/".length, -"/move".length);
       const parts = rest.split("/").map(segment);
       if (parts.length !== 2) {
         return sendError(res, 400, "expected /settings/workflows/{scope}/{name}/move");
       }
       return void await handleWorkflowMove(res, server, parts[0], parts[1]);
     }
-    if (method === "POST" && path33.startsWith("/settings/workflows/") && path33.endsWith("/start")) {
-      const rest = path33.slice("/settings/workflows/".length, -"/start".length);
+    if (method === "POST" && path34.startsWith("/settings/workflows/") && path34.endsWith("/start")) {
+      const rest = path34.slice("/settings/workflows/".length, -"/start".length);
       const parts = rest.split("/").map(segment);
       if (parts.length !== 2) {
         return sendError(res, 400, "expected /settings/workflows/{scope}/{name}/start");
       }
       return void await handleWorkflowStart(res, server, parts[0], parts[1], body);
     }
-    if (method === "POST" && path33.startsWith("/settings/workflow-runs/") && path33.endsWith("/resume")) {
-      const runId = segment(path33.slice("/settings/workflow-runs/".length, -"/resume".length));
+    if (method === "POST" && path34.startsWith("/settings/workflow-runs/") && path34.endsWith("/resume")) {
+      const runId = segment(path34.slice("/settings/workflow-runs/".length, -"/resume".length));
       if (!runId || runId.includes("/")) {
         return sendError(res, 400, "expected /settings/workflow-runs/{runId}/resume");
       }
       return void await handleWorkflowResume(res, server, runId, body);
     }
-    if (method === "POST" && path33.startsWith("/settings/workflow-runs/") && path33.endsWith("/stop")) {
-      const runId = segment(path33.slice("/settings/workflow-runs/".length, -"/stop".length));
+    if (method === "POST" && path34.startsWith("/settings/workflow-runs/") && path34.endsWith("/stop")) {
+      const runId = segment(path34.slice("/settings/workflow-runs/".length, -"/stop".length));
       if (!runId || runId.includes("/")) {
         return sendError(res, 400, "expected /settings/workflow-runs/{runId}/stop");
       }
       return void await handleWorkflowStop(res, server, runId, body);
     }
-    if (method === "POST" && path33 === "/settings/workflow-runs/dismiss-finished") {
+    if (method === "POST" && path34 === "/settings/workflow-runs/dismiss-finished") {
       return void await handleWorkflowDismissFinished(res, server, body);
     }
-    if (method === "POST" && path33 === "/settings/workflow-runs/dismiss-batch") {
+    if (method === "POST" && path34 === "/settings/workflow-runs/dismiss-batch") {
       return void await handleWorkflowDismissBatch(res, server, body);
     }
-    if (method === "POST" && path33.startsWith("/settings/workflow-runs/") && path33.endsWith("/dismiss")) {
-      const runId = segment(path33.slice("/settings/workflow-runs/".length, -"/dismiss".length));
+    if (method === "POST" && path34.startsWith("/settings/workflow-runs/") && path34.endsWith("/dismiss")) {
+      const runId = segment(path34.slice("/settings/workflow-runs/".length, -"/dismiss".length));
       if (!runId || runId.includes("/")) {
         return sendError(res, 400, "expected /settings/workflow-runs/{runId}/dismiss");
       }
       return void await handleWorkflowDismiss(res, server, runId);
     }
-    if (method === "POST" && path33.startsWith("/settings/workflow-runs/") && path33.endsWith("/settings")) {
-      const runId = segment(path33.slice("/settings/workflow-runs/".length, -"/settings".length));
+    if (method === "POST" && path34.startsWith("/settings/workflow-runs/") && path34.endsWith("/settings")) {
+      const runId = segment(path34.slice("/settings/workflow-runs/".length, -"/settings".length));
       if (!runId || runId.includes("/")) {
         return sendError(res, 400, "expected /settings/workflow-runs/{runId}/settings");
       }
@@ -55486,19 +55597,19 @@ async function startRemoteEndpoint(server, app, config2) {
   const sessionDeleteHandler = createSessionDeleteHandler(server);
   const sessionListHandler = createSessionListHandler(server);
   const httpServer = createServer((req, res) => {
-    const path33 = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
-    const closeMatch = path33.match(/^\/sessions\/([^/]+)\/close$/);
-    const renameMatch = path33.match(/^\/sessions\/([^/]+)\/rename$/);
-    const deleteMatch = path33.match(/^\/sessions\/([^/]+)\/delete$/);
-    if (path33 === "/acp")
+    const path34 = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
+    const closeMatch = path34.match(/^\/sessions\/([^/]+)\/close$/);
+    const renameMatch = path34.match(/^\/sessions\/([^/]+)\/rename$/);
+    const deleteMatch = path34.match(/^\/sessions\/([^/]+)\/delete$/);
+    if (path34 === "/acp")
       acpHttpHandler(req, res);
-    else if (path33.startsWith("/settings"))
+    else if (path34.startsWith("/settings"))
       settingsHandler(req, res);
-    else if (path33 === "/push/test")
+    else if (path34 === "/push/test")
       pushTestHandler(req, res);
-    else if (path33.startsWith("/fs/"))
+    else if (path34.startsWith("/fs/"))
       fileHandler(req, res);
-    else if (path33 === "/status")
+    else if (path34 === "/status")
       statusHandler(req, res);
     else if (closeMatch)
       sessionCloseHandler(req, res, closeMatch[1]);
@@ -55506,7 +55617,7 @@ async function startRemoteEndpoint(server, app, config2) {
       sessionRenameHandler(req, res, renameMatch[1]);
     else if (deleteMatch)
       sessionDeleteHandler(req, res, deleteMatch[1]);
-    else if (path33 === "/sessions")
+    else if (path34 === "/sessions")
       sessionListHandler(req, res);
     else {
       res.writeHead(404, { "Content-Type": "text/plain" });
@@ -55514,8 +55625,8 @@ async function startRemoteEndpoint(server, app, config2) {
     }
   });
   httpServer.on("upgrade", (req, socket, head) => {
-    const path33 = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
-    if (path33 === "/acp")
+    const path34 = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
+    if (path34 === "/acp")
       upgradeHandler(req, socket, head);
     else
       socket.destroy();
@@ -55727,9 +55838,9 @@ init_push();
 init_quota();
 init_resume();
 init_file_lock();
-import { randomUUID as randomUUID15 } from "node:crypto";
-import { existsSync as existsSync14, mkdirSync as mkdirSync8, readFileSync as readFileSync23, renameSync as renameSync7, unlinkSync as unlinkSync4, writeFileSync as writeFileSync7 } from "node:fs";
-import path32 from "node:path";
+import { randomUUID as randomUUID16 } from "node:crypto";
+import { existsSync as existsSync14, mkdirSync as mkdirSync9, readFileSync as readFileSync23, renameSync as renameSync8, unlinkSync as unlinkSync5, writeFileSync as writeFileSync8 } from "node:fs";
+import path33 from "node:path";
 import process17 from "node:process";
 init_utils();
 var QUOTA_RESUME_SCAN_INTERVAL_MS = 5 * 6e4;
@@ -55757,7 +55868,7 @@ var PERMANENT_REASONS = /* @__PURE__ */ new Set([
 ]);
 var STORE_FILENAME4 = "acp-quota-resumes.json";
 function storePath4() {
-  return path32.join(zcodeHomeDir2(), "v2", STORE_FILENAME4);
+  return path33.join(zcodeHomeDir2(), "v2", STORE_FILENAME4);
 }
 function asRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : void 0;
@@ -55809,10 +55920,10 @@ function readTable4() {
 function writeTable(table) {
   try {
     const p = storePath4();
-    mkdirSync8(path32.dirname(p), { recursive: true });
+    mkdirSync9(path33.dirname(p), { recursive: true });
     const tmp = `${p}.tmp-${process17.pid}`;
-    writeFileSync7(tmp, JSON.stringify(table, null, 2));
-    renameSync7(tmp, p);
+    writeFileSync8(tmp, JSON.stringify(table, null, 2));
+    renameSync8(tmp, p);
     return true;
   } catch (e) {
     warn2(`quota-resume: store write failed (${e instanceof Error ? e.message : String(e)})`);
@@ -56209,7 +56320,7 @@ function resumeLabel2(entry) {
   return entry.name ?? `run ${entry.runId.slice(0, 8)}`;
 }
 function announceResumed(server, entry, acpSid) {
-  void sendTextChunk(server.clients.broadcast(), acpSid, messages().workflowQuotaResumed(resumeLabel2(entry)), randomUUID15()).catch(() => void 0);
+  void sendTextChunk(server.clients.broadcast(), acpSid, messages().workflowQuotaResumed(resumeLabel2(entry)), randomUUID16()).catch(() => void 0);
   pushSettled(server, {
     kind: "run",
     label: pushSourceLabel(server, acpSid),
@@ -56217,7 +56328,7 @@ function announceResumed(server, entry, acpSid) {
   });
 }
 function announceGaveUp(server, entry, acpSid) {
-  void sendTextChunk(server.clients.broadcast(), acpSid, messages().workflowQuotaResumeGaveUp(resumeLabel2(entry)), randomUUID15()).catch(() => void 0);
+  void sendTextChunk(server.clients.broadcast(), acpSid, messages().workflowQuotaResumeGaveUp(resumeLabel2(entry)), randomUUID16()).catch(() => void 0);
   pushSettled(server, {
     kind: "run",
     label: pushSourceLabel(server, acpSid),
@@ -56375,7 +56486,14 @@ async function quota(origin, key, request) {
   const json2 = await response.json();
   if (json2?.success === false && noPlan.test(String(json2.msg ?? ""))) return { state: "none", items: [] };
   const result = parseQuotaEnvelope({ status: response.status, json: json2, text: "" });
-  return result.kind === "success" ? { state: "active", items: result.items } : { state: "unknown", items: [] };
+  return result.kind === "success" ? { state: "active", items: result.items, level: result.level } : { state: "unknown", items: [] };
+}
+var windowMinutes = { token_5h: 300, token_week: 7 * 24 * 60 };
+function windowScope(item) {
+  return item.key === "mcp" ? { models: [] } : windowMinutes[item.key] ? { windowMinutes: windowMinutes[item.key] } : {};
+}
+function planLevel(value) {
+  return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9 _-]{0,23}$/.test(value.trim()) ? value.trim() : void 0;
 }
 async function codingPlan(family, origin, legacy, request, apiKeys) {
   const id = accountProviderIdFor("builtin:" + family + "-coding-plan");
@@ -56387,13 +56505,16 @@ async function codingPlan(family, origin, legacy, request, apiKeys) {
   const platform3 = family === "zai" ? "Z.ai" : "BigModel";
   const results = await Promise.all(keys.map((entry) => quota(origin, entry.key, request).catch(() => ({ state: "unknown", items: [] }))));
   const state2 = ["active", "none", "unknown"].find((value) => results.some((result) => result.state === value));
+  const level = results.map((result) => planLevel(result.level)).find(Boolean);
   return {
     state: state2,
+    ...level ? { level } : {},
     windows: results.flatMap((result, index) => result.items.map((item) => ({
       // Several keys of one platform are told apart by their ZCode names.
       label: (keys.length > 1 && keys[index].name ? keys[index].name : platform3) + " \xB7 " + item.label,
       remainingPercent: item.leftPercent,
-      ...item.nextResetTime > 0 ? { resetsAt: item.nextResetTime } : {}
+      ...item.nextResetTime > 0 ? { resetsAt: item.nextResetTime } : {},
+      ...windowScope(item)
     })))
   };
 }
@@ -56408,8 +56529,9 @@ async function readCodingPlans(request = fetch) {
     return [family, plan];
   }));
   const plans = Object.fromEntries(entries.map(([family, plan]) => [family, plan.state]));
+  const levels2 = Object.fromEntries(entries.filter(([, plan]) => plan.level).map(([family, plan]) => [family, plan.level]));
   const windows = entries.flatMap(([, plan]) => plan.windows).filter(shown).slice(0, 24);
-  return { plans, usage: windows.length ? { updatedAt: Date.now(), windows } : null };
+  return { plans, levels: levels2, usage: windows.length ? { updatedAt: Date.now(), windows } : null };
 }
 async function readPlanUsage(request = fetch) {
   return (await readCodingPlans(request)).usage;
@@ -56418,37 +56540,80 @@ async function readPlanUsage(request = fetch) {
 // account.mjs
 init_credential_store();
 init_templates();
+import { createHash as createHash6 } from "node:crypto";
 var families = ["bigmodel", "zai"];
-function printable(value) {
+function printable(value, max = 80) {
   if (typeof value !== "string") return void 0;
-  const text = value.trim();
-  return text && text.length <= 80 && !/[\u0000-\u001f\u007f]/.test(text) ? text : void 0;
+  const text2 = value.trim();
+  return text2 && text2.length <= max && !/[\u0000-\u001f\u007f]/.test(text2) ? text2 : void 0;
 }
-function displayName(raw) {
+var emailShape = /^[^\s@]{1,64}@[^\s@]{1,253}$/;
+function email3(value) {
+  const text2 = printable(value, 254);
+  return text2 && emailShape.test(text2) ? text2 : void 0;
+}
+function userInfo2(raw) {
   try {
     const info = JSON.parse(raw);
-    return printable(info?.displayName) ?? printable(info?.username) ?? printable(info?.name) ?? printable(info?.rawProfile?.name);
+    return info && typeof info === "object" && !Array.isArray(info) ? info : void 0;
   } catch {
     return void 0;
   }
+}
+function displayName(raw) {
+  const info = userInfo2(raw);
+  return printable(info?.displayName) ?? printable(info?.username) ?? printable(info?.name) ?? printable(info?.rawProfile?.name);
 }
 function apiKeyPlatforms() {
   const keys = codingPlanApiKeys();
   return families.filter((family) => keys[family].length);
 }
+function signedInFamily(store) {
+  const signedIn = (family) => !!store[`oauth:${family}:access_token`]?.trim();
+  const active2 = store["oauth:active_provider"]?.trim();
+  return families.includes(active2) && signedIn(active2) ? active2 : families.find(signedIn);
+}
 function readAccount() {
   const store = readCredentialStoreSync();
-  const signedIn = (family2) => !!store[`oauth:${family2}:access_token`]?.trim();
-  const active2 = store["oauth:active_provider"]?.trim();
-  const family = families.includes(active2) && signedIn(active2) ? active2 : families.find(signedIn);
+  const family = signedInFamily(store);
   const apiKeys = apiKeyPlatforms();
   const keys = apiKeys.length ? { apiKeys } : {};
   if (!family) return { signedIn: false, ...keys };
   const name = displayName(store[`oauth:${family}:user_info`]);
   return { signedIn: true, family, ...name ? { name } : {}, ...keys };
 }
+function fingerprint(kind, family, id) {
+  return createHash6("sha256").update(`cindy-zcode:${kind}:${family}:${id}`).digest("hex").slice(0, 32);
+}
+function readAccountIdentity() {
+  const store = readCredentialStoreSync();
+  const family = signedInFamily(store);
+  const out = {};
+  if (family) {
+    const info = userInfo2(store[`oauth:${family}:user_info`]) ?? {};
+    const address = email3(info.email) ?? email3(info.rawProfile?.email) ?? email3(info.username);
+    const name = printable(info.displayName) ?? (email3(info.username) ? void 0 : printable(info.username)) ?? printable(info.name) ?? printable(info.rawProfile?.name);
+    const plan = `account:${family}-individual-coding-plan`;
+    const id = [info.id, info.userId, info.uid, info.rawProfile?.id, store[`account-provider:${plan}:identity`]].map((value) => typeof value === "number" && Number.isFinite(value) ? String(value) : printable(value, 256)).find(Boolean) ?? address?.toLowerCase() ?? name;
+    out.oauth = {
+      family,
+      ...name ? { name } : {},
+      ...address ? { email: address } : {},
+      ...id ? { fingerprint: fingerprint("oauth", family, id) } : {}
+    };
+  }
+  const keys = codingPlanApiKeys();
+  const keyFamily = families.find((item) => keys[item].length);
+  if (keyFamily) {
+    const { key } = keys[keyFamily][0];
+    out.apiKey = { family: keyFamily, last4: key.slice(-4), fingerprint: fingerprint("key", keyFamily, key) };
+  }
+  return out;
+}
 
 // adapter.mjs
+init_templates();
+init_errors4();
 init_resolve();
 init_options();
 init_options();
@@ -56467,9 +56632,14 @@ function describeEfforts(value) {
 export {
   buildInitialConfigOptions,
   builtinProviderEnv,
+  classifyAccountError,
+  codingPlanKeyTemplates,
   describeEfforts,
   readAccount,
+  readAccountIdentity,
   readCodingPlans,
   readPlanUsage,
-  main as serve
+  saveCodingPlanKey,
+  main as serve,
+  withCindyErrorMeta
 };

@@ -2,10 +2,19 @@
 // use the same executable, bundled bridge and provider environment.
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { builtinProviderEnv, buildInitialConfigOptions, describeEfforts, readAccount, readCodingPlans, serve } from './vendor/dist/adapter.mjs';
+import {
+  builtinProviderEnv, buildInitialConfigOptions, codingPlanKeyTemplates, describeEfforts, readAccount, readAccountIdentity,
+  readCodingPlans, saveCodingPlanKey, serve,
+} from './vendor/dist/adapter.mjs';
 
 const entry = process.env.ZCODE_BIN;
 Object.assign(process.env, builtinProviderEnv(entry));
+
+// Model values of the initial menu, as session/new offers them.
+async function modelOptions() {
+  const options = await buildInitialConfigOptions({ backendKind: 'zcode' });
+  return { options, model: options.find(item => item.category === 'model') };
+}
 
 async function detect() {
   const isScript = /\.(?:mjs|cjs|js)$/i.test(entry);
@@ -21,8 +30,7 @@ async function detect() {
   }
   // The same initial menu as session/new, without creating a user-visible
   // conversation, opening a workspace, sending a prompt or charging a turn.
-  const options = await buildInitialConfigOptions({ backendKind: 'zcode' });
-  const model = options.find(item => item.category === 'model');
+  const { options, model } = await modelOptions();
   const models = [];
   const seen = new Set();
   for (const { value: id, name } of model?.options ?? []) {
@@ -39,12 +47,16 @@ async function detect() {
   }
   const mode = options.find(item => item.category === 'mode');
   const modes = (mode?.options ?? []).map(o => o.value).filter(id => ['default', 'acceptEdits', 'plan'].includes(id));
-  return { available: true, version, path: entry, models, modes, defaultMode: mode?.currentValue };
+  // Platforms whose Coding Plan API key template this ZCode has: Cindy can add
+  // such keys as accounts of their own.
+  const apiKeyFamilies = Object.keys(codingPlanKeyTemplates()).sort();
+  return { available: true, version, path: entry, models, modes, defaultMode: mode?.currentValue, apiKeyFamilies };
 }
 
 // `zcode login` and `zcode logout` read the same provider table as the bridge,
-// so they run with this environment. The worker ends stdin to cancel; stdin
-// also ends when the worker exits, which stops a sign-in still waiting.
+// so they run with this environment (and an added account's ZCODE_HOME and
+// ZCODE_DATA_BASE_DIR). The worker ends stdin to cancel; stdin also ends when
+// the worker exits, which stops a sign-in still waiting.
 async function cli(args) {
   if (!['login', 'logout'].includes(args[0])) return 2;
   const isScript = /\.(?:mjs|cjs|js)$/i.test(entry);
@@ -61,19 +73,52 @@ async function cli(args) {
   });
 }
 
+// The key arrives on stdin, never on the command line. Only an account Cindy
+// added is written; the original ZCode home (shared with the desktop app) never is.
+async function saveKey(family) {
+  const home = process.env.ZCODE_HOME;
+  if (!home || home !== process.env.CINDY_ZCODE_ACCOUNT_HOME) return { ok: false, error: 'unsupported' };
+  let input = '';
+  process.stdin.setEncoding('utf8');
+  for await (const chunk of process.stdin) {
+    input += chunk;
+    if (input.length > 8192) return { ok: false, error: 'invalid-secret' };
+  }
+  try {
+    saveCodingPlanKey(family, input.trim());
+    return { ok: true };
+  } catch (error) {
+    const code = error?.message;
+    return { ok: false, error: code === 'unsupported' || code === 'invalid-secret' ? code : 'failed' };
+  } finally {
+    input = '';
+  }
+}
+
 try {
   if (process.argv[2] === '--cli') {
     process.exit(await cli(process.argv.slice(3)));
   } else if (process.argv[2] === '--detect') {
     process.stdout.write(JSON.stringify(await detect()) + '\n');
+  } else if (process.argv[2] === '--save-key') {
+    process.stdout.write(JSON.stringify(await saveKey(process.argv[3])) + '\n');
   } else if (process.argv[2] === '--account') {
     // Account status and usage share one quota read per credential. Without a
     // sign-in, the plan is the one behind the Coding Plan API key in ZCode.
     const account = readAccount();
-    const { plans, usage } = await readCodingPlans();
+    const { plans, levels, usage } = await readCodingPlans();
     const platform = account.signedIn ? account.family : account.apiKeys?.[0];
     const plan = platform ? plans[platform] : undefined;
-    process.stdout.write(JSON.stringify({ account: { ...account, ...(plan ? { plan } : {}) }, usage }) + '\n');
+    const level = plan === 'active' ? levels?.[platform] : undefined;
+    // For Cindy's engine accounts: who is signed in, and (for an added
+    // account) the models this ZCode home offers.
+    const extra = { identity: readAccountIdentity(), ...(level ? { planLevel: level } : {}) };
+    if (process.argv.includes('--models')) {
+      const { model } = await modelOptions();
+      extra.models = (model?.options ?? []).map(option => option.value)
+        .filter(id => typeof id === 'string' && id.trim() && id.length <= 256).slice(0, 200);
+    }
+    process.stdout.write(JSON.stringify({ account: { ...account, ...(plan ? { plan } : {}) }, usage, ...extra }) + '\n');
   } else {
     await serve();
   }

@@ -47,6 +47,17 @@ ZCode 的 Start Plan 只服务 ZCode 桌面版，其他客户端调用时返回 
 
 设置页显示 ZCode 账号的智谱 BigModel 或 Z.ai GLM Coding Plan 额度。账号检查和用量共用一次额度查询，每个不同的 Key 查询一次，同一平台最多 3 个。额度服务拒绝某个 Key 时，卡片只说明暂时读不到额度，不据此判断 Key 无效：2026-11-20 BigModel 的额度服务拒绝过一个能正常运行 GLM-5.3 的 Coding Plan API Key。自定义模型服务没有提供套餐数据时，页面会显示提示。支持插件用量的 Cindy 也会在使用此引擎的任务输入框下方显示用量，点击可看明细。旁边的圆环显示当前任务由引擎上报的上下文占用。
 
+## 在 Cindy 里使用多个账号
+
+支持引擎账号的 Cindy 可以给 ZCode 添加更多账号，像内置的 Claude、Codex 账号池一样分摊任务、限制并发，额度用完时自动换号，并显示每个账号的用户名或邮箱。ZCode 原有的登录（`~/.zcode`，与桌面版共用）是「默认」账号，用法不变。
+
+- 添加的每个账号是一次智谱 BigModel 或 Z.ai 登录，或一个 GLM Coding Plan API Key，保存在 Cindy 为它新建的文件夹里。任务只让 ZCode 使用这个文件夹（`ZCODE_HOME=<文件夹>/.zcode`、`ZCODE_DATA_BASE_DIR=<文件夹>`）保存登录、服务商配置、设置和会话记录，不读写原有登录，也不改 ZCode 的全局配置。文件夹不可用时任务直接报错，不会改用原有登录。分享给朋友的任务从这个账号的文件夹建立隔离目录。
+- ZCode 按 `credentials.json` 的完整路径在系统钥匙串里各存一把加密密钥，所以每个文件夹里的登录互不覆盖，也不影响桌面版的登录。
+- 只装了 ZCode 桌面版时，只能添加 Coding Plan API Key 账号：在 Cindy 弹出的窗口里粘贴 Key，插件按 ZCode 模型设置的同一模板把它写进该账号的文件夹。桌面版随附的命令行不能单独登录，所以不提供浏览器登录；默认账号的登录和切换仍在桌面版里完成。装了独立的 ZCode CLI 时，还可以在浏览器里登录添加 BigModel 或 Z.ai 账号（`zcode login`）。
+- Cindy 显示登录账号的名称和邮箱，API Key 账号显示平台和 Key 的末四位，并显示 GLM Coding Plan 的套餐档位。用量按账号分别读取，5 小时和每周额度带上窗口长度；MCP 工具额度用完不影响模型调用。
+- 任务因为账号失败时，适配器在错误里注明原因，供 Cindy 冷却这个账号并换号：额度用完（如 1308、1310）、登录或 Key 失效（401、1000–1004）、服务繁忙（429 并发、503）。适配器会自动重试的网络和繁忙错误不在此列：重试用完时照旧以提示结束这一轮，不触发换号。
+- 旧版 Cindy 不传账号文件夹，也不调用这些方法，插件的行为与以前相同。
+
 ## 开发
 
 运行下列命令可复现随包适配器。依赖版本与各平台原生库的完整性散列固定在 `.build/package-lock.json`。构建需要 Node.js 和系统 tar。
@@ -59,7 +70,7 @@ node build.mjs
 
 Windows 的 Git Bash 自带的 tar 会把 `C:` 当成远程主机，构建时请让系统自带的 `C:\Windows\System32\tar.exe` 排在 PATH 前面。
 
-单元测试从插件根目录运行 `node --test .test/usage.test.mjs .test/account.test.mjs .test/api-key.test.mjs`，使用临时用户目录和替身 ZCode 安装，不读取本机的 ZCode。集成测试使用官方 ZCode 和临时本地模型服务：运行 `node --test .test/desktop.test.mjs`，并通过 `ZCODE_TEST_BIN` 指定测试用 `zcode.cjs` 的绝对路径。测试另建用户目录和工作目录。通过 Cindy Forge 打包本目录即可生成安装包。
+单元测试从插件根目录运行 `node --test .test/usage.test.mjs .test/account.test.mjs .test/api-key.test.mjs .test/remote-workspace.test.mjs`，使用临时用户目录和替身 ZCode 安装，不读取本机的 ZCode，额度查询发往一个关闭的本机代理，不联网。集成测试使用官方 ZCode 和临时本地模型服务：运行 `node --test .test/desktop.test.mjs`，并通过 `ZCODE_TEST_BIN` 指定测试用 `zcode.cjs` 的绝对路径。测试另建用户目录和工作目录。通过 Cindy Forge 打包本目录即可生成安装包。
 
 ## 发布新版本
 
@@ -69,6 +80,6 @@ Windows 的 Git Bash 自带的 tar 会把 `C:` 当成远程主机，构建时请
 
 本仓库的插件代码采用 [Apache-2.0](LICENSE) 许可。随包第三方代码和品牌图标各自保留下列许可与归属。
 
-随包桥接代码来自 [zcode-acp-server 0.89.0](https://github.com/william0wang/zcode-acp/tree/5987b3e1dc66589c2fb9acc8d8f90de796376490)。Cindy 的本地 stdio、初始权限模式、模型列表（含隐藏 Start Plan）和命令行登录识别的适配记录在 [.build/build.mjs](.build/build.mjs)。依赖许可见 [vendor/licenses](vendor/licenses)。
+随包桥接代码来自 [zcode-acp-server 0.89.0](https://github.com/william0wang/zcode-acp/tree/5987b3e1dc66589c2fb9acc8d8f90de796376490)。Cindy 的本地 stdio、初始权限模式、模型列表（含隐藏 Start Plan）、命令行登录识别和账号类错误标注的适配记录在 [.build/build.mjs](.build/build.mjs)。依赖许可见 [vendor/licenses](vendor/licenses)。
 
 图标取自 [Z.ai 官方 ZCode 项目](https://github.com/zai-org/ZCode/blob/fec975905a2abd4c07e35c40d51fa097a2258ec9/public/logo/icons/256x256.png)，标志归原权利人所有。

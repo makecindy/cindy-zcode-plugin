@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { readBuiltinTable } from 'zcode-acp-server/dist/config/account-provider.js';
 import { zcodePersonalProviderPath } from 'zcode-acp-server/dist/utils.js';
 
@@ -47,4 +49,75 @@ export function codingPlanApiKeys() {
     out[family].push({ key, name: typeof rule.providerName === 'string' ? rule.providerName : '' });
   }
   return out;
+}
+
+// The installed ZCode's own templates for Coding Plan API keys, by platform:
+// the same templates its model settings use when the user adds such a key.
+export function codingPlanKeyTemplates(table = readBuiltinTable()?.table) {
+  const out = {};
+  for (const template of table?.config?.providerConfigRules?.templateRules ?? []) {
+    if (!template?.templateId || typeof template.templateId !== 'string') continue;
+    if (template.config?.access?.type !== 'zhipu-coding-plan-api-key') continue;
+    let family;
+    try { family = origins[new URL(template.config.api?.baseUrl).origin]; } catch { /* Not a Coding Plan address. */ }
+    if (family && !out[family]) out[family] = template;
+  }
+  return out;
+}
+
+const keyShape = /^[!-~]{1,4096}$/;
+
+/**
+ * Saves a Coding Plan API key into this ZCode home's personal provider file the
+ * way ZCode's model settings do: a provider made from the platform's template
+ * that holds the key. The template's address is repeated so the bridge also
+ * entitles the platform's Coding Plan models (upstream manualCodingPlanKeys reads
+ * the family from that address), the model ids a sign-in lists. Other Coding
+ * Plan key providers of this home are replaced: one home is one account.
+ * Throws 'unsupported' without a template, 'invalid-secret' for a malformed key.
+ */
+export function saveCodingPlanKey(family, apiKey, file = zcodePersonalProviderPath()) {
+  if (!Object.values(origins).includes(family)) throw new Error('unsupported');
+  const key = typeof apiKey === 'string' ? apiKey.trim() : '';
+  if (!keyShape.test(key)) throw new Error('invalid-secret');
+  const table = readBuiltinTable()?.table;
+  const template = codingPlanKeyTemplates(table)[family];
+  if (!template) throw new Error('unsupported');
+  let current = { schemaVersion: 1, config: { providerConfigRules: { providerRules: [] } } };
+  let text;
+  try { text = readFileSync(file, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (text !== undefined) {
+    current = JSON.parse(text);
+    if (!current || typeof current !== 'object' || Array.isArray(current)) throw new Error('Unreadable provider file');
+  }
+  const config = current.config && typeof current.config === 'object' ? current.config : {};
+  const rulesHolder = config.providerConfigRules && typeof config.providerConfigRules === 'object' ? config.providerConfigRules : {};
+  const rules = (Array.isArray(rulesHolder.providerRules) ? rulesHolder.providerRules : [])
+    .filter(rule => withProviderTemplate(rule, table)?.config?.access?.type !== 'zhipu-coding-plan-api-key');
+  rules.push({
+    providerId: template.templateId,
+    templateId: template.templateId,
+    providerName: printableName(template.providerName) ?? (family === 'zai' ? 'Z.ai Coding Plan' : 'BigModel Coding Plan'),
+    config: {
+      group: 'standard-personal',
+      access: { type: 'zhipu-coding-plan-api-key', apiKey: key },
+      api: { baseUrl: template.config.api.baseUrl },
+      personalModelIds: [],
+      modelOrder: [],
+    },
+  });
+  const next = { ...current, config: { ...config, providerConfigRules: { ...rulesHolder, providerRules: rules } } };
+  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  const temporary = `${file}.${randomUUID()}.tmp`;
+  try {
+    writeFileSync(temporary, JSON.stringify(next, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+    renameSync(temporary, file);
+  } finally {
+    try { unlinkSync(temporary); } catch { /* Renamed. */ }
+  }
+}
+
+function printableName(value) {
+  return typeof value === 'string' && value.trim() && value.length <= 80 && !/[\u0000-\u001f\u007f]/.test(value)
+    ? value.trim() : undefined;
 }
