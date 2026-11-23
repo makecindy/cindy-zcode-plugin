@@ -138,12 +138,76 @@ describe('ZCode accounts Cindy adds (--cindy-account-dir)', () => {
     assert.equal('accounts' in unavailable[0].harnesses[0], false);
   });
 
+  test('main.js lists the added accounts\' models with the original login\'s and remembers them in /kv', async () => {
+    const puts = [];
+    const detects = [];
+    let kv = { theme: 'kept', engineAccounts: [
+      { dir: 'D:\\accounts\\a', models: [{ id: 'zai-api\\GLM-5.3', name: 'GLM-5.3' }] },
+      { dir: 'D:\\accounts\\gone', models: [{ id: 'gone\\GLM-5', name: 'GLM-5' }] },
+    ] };
+    let onHost;
+    class Channel { constructor() { this.onmessage = null; } postMessage() {} }
+    const context = vm.createContext({
+      BroadcastChannel: Channel, setTimeout, clearTimeout,
+      cindy: {
+        request: async () => ({ ok: true, context: { locale: 'en', uiLocale: 'en' } }),
+        node: {
+          request: async (req) => {
+            if (req.method !== 'detect') return { ok: false };
+            detects.push(req.params);
+            // The original login has no model; the worker confirms which account folders still exist.
+            return { ok: true, result: { available: true, version: '0.17.1', models: [], reason: 'sign-in-required',
+              signIn: 'desktop', apiKeyFamilies: ['bigmodel'], accountDirs: ['D:\\accounts\\a'] } };
+          },
+        },
+        onHostMessage: (handler) => { onHost = handler; return () => {}; },
+      },
+      fetch: async (url, init) => {
+        if (url === '/kv') {
+          if (init?.method === 'PUT') kv = JSON.parse(init.body);
+          return { ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(kv)) };
+        }
+        if (url === '/harnesses') puts.push(JSON.parse(init.body).harnesses[0]);
+        return { ok: true, status: 204 };
+      },
+    });
+    vm.runInContext(fs.readFileSync(path.join(root, 'main.js'), 'utf8'), context, { filename: 'main.js' });
+    const settle = async (count) => {
+      for (let i = 0; i < 100 && puts.length < count; i++) await new Promise((r) => setTimeout(r, 20));
+      await new Promise((r) => setTimeout(r, 50));
+    };
+    await settle(1);
+    assert.deepEqual(JSON.parse(JSON.stringify(detects)), [{ accountDirs: ['D:\\accounts\\a', 'D:\\accounts\\gone'] }]);
+    // Available although the original login has no model, so the first account can be added.
+    assert.equal(puts[0].available, true);
+    assert.equal('reason' in puts[0], false);
+    assert.deepEqual(puts[0].accounts.methods.map((method) => method.id), ['bigmodel-key']);
+    assert.deepEqual(puts[0].models, [{ id: 'zai-api\\GLM-5.3', name: 'GLM-5.3' }]);
+    assert.deepEqual(kv, { theme: 'kept', engineAccounts: [{ dir: 'D:\\accounts\\a', models: [{ id: 'zai-api\\GLM-5.3', name: 'GLM-5.3' }] }] });
+
+    const added = { id: 'account:bigmodel-individual-coding-plan\\GLM-5.3', name: 'GLM-5.3', efforts: ['low', 'high'], defaultEffort: 'high' };
+    await onHost({ type: 'event', name: 'node-notification', method: 'account-models',
+      params: { dir: 'D:\\accounts\\b', models: [added, { id: 'zai-api\\GLM-5.3', name: 'GLM-5.3' }] } });
+    await settle(2);
+    assert.deepEqual(puts[1].models, [{ id: 'zai-api\\GLM-5.3', name: 'GLM-5.3' }, added]);
+    assert.deepEqual(kv.engineAccounts.map((entry) => entry.dir), ['D:\\accounts\\a', 'D:\\accounts\\b']);
+    assert.equal(kv.theme, 'kept');
+
+    await onHost({ type: 'event', name: 'node-notification', method: 'account-models', params: { dir: 'D:\\accounts\\a', removed: true } });
+    await settle(3);
+    assert.deepEqual(puts[2].models, [added, { id: 'zai-api\\GLM-5.3', name: 'GLM-5.3' }]);
+    assert.deepEqual(kv.engineAccounts.map((entry) => entry.dir), ['D:\\accounts\\b']);
+  });
+
   test('the entry refuses an unusable account directory and never falls back to the original login', async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'zcode-account-entry-'));
     try {
       const { home, env, started } = standIn(tmp);
       const file = path.join(tmp, 'not-a-dir');
       fs.writeFileSync(file, '');
+      // Links back to the original login: the folder itself, or a parent folder (junctions on Windows).
+      fs.symlinkSync(home, path.join(tmp, 'linked-home'), 'junction');
+      fs.symlinkSync(tmp, path.join(tmp, 'linked-parent'), 'junction');
       const before = tree(home);
       for (const args of [
         ['--cindy-account-dir'],
@@ -152,6 +216,8 @@ describe('ZCode accounts Cindy adds (--cindy-account-dir)', () => {
         ['--cindy-account-dir', file],
         // <home>/.zcode would be the original login itself.
         ['--cindy-account-dir', home],
+        ['--cindy-account-dir', path.join(tmp, 'linked-home')],
+        ['--cindy-account-dir', path.join(tmp, 'linked-parent', 'home')],
         ['--cindy-account-dir=' + path.join(tmp, 'missing')],
         ['--cindy-remote-workspace', '--cindy-guest-workspace', '--cindy-account-dir', path.join(tmp, 'missing')],
       ]) {

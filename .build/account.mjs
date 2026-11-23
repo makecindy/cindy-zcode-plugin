@@ -59,16 +59,18 @@ export function readAccount() {
   return { signedIn: true, family, ...(name ? { name } : {}), ...keys };
 }
 
-// Opaque and stable per account, so Cindy recognises the same account added
-// twice. Never shown; a hash, so neither the user id nor a key can be read back.
-function fingerprint(kind, family, id) {
-  return createHash('sha256').update(`cindy-zcode:${kind}:${family}:${id}`).digest('hex').slice(0, 32);
+// Opaque and stable per signed-in user, so Cindy recognises the same account
+// added twice. Derived only from the profile's public user id (or email), never
+// from a token or key; hashed so the id itself is not handed on.
+function userFingerprint(family, userId) {
+  return createHash('sha256').update(`cindy-zcode:user:${family}:${userId}`).digest('hex').slice(0, 32);
 }
 
 /**
  * Who this ZCode home is signed in as, for Cindy's engine accounts: the OAuth
  * user's name and email, and the platform and last four characters of a Coding
- * Plan API key. Tokens and keys never leave this function.
+ * Plan API key. Tokens and keys never leave this function, and nothing derived
+ * from them does except those four characters.
  */
 export function readAccountIdentity() {
   const store = readCredentialStoreSync();
@@ -79,20 +81,17 @@ export function readAccountIdentity() {
     const address = email(info.email) ?? email(info.rawProfile?.email) ?? email(info.username);
     const name = printable(info.displayName) ?? (email(info.username) ? undefined : printable(info.username)) ??
       printable(info.name) ?? printable(info.rawProfile?.name);
-    const plan = `account:${family}-individual-coding-plan`;
-    const id = [info.id, info.userId, info.uid, info.rawProfile?.id, store[`account-provider:${plan}:identity`]]
+    const userId = [info.id, info.userId, info.uid, info.rawProfile?.id]
       .map(value => (typeof value === 'number' && Number.isFinite(value) ? String(value) : printable(value, 256)))
-      .find(Boolean) ?? address?.toLowerCase() ?? name;
+      .find(Boolean) ?? address?.toLowerCase();
     out.oauth = {
       family, ...(name ? { name } : {}), ...(address ? { email: address } : {}),
-      ...(id ? { fingerprint: fingerprint('oauth', family, id) } : {}),
+      ...(userId ? { fingerprint: userFingerprint(family, userId) } : {}),
     };
   }
+  // An API key account has no fingerprint: there is no public id to derive one from.
   const keys = codingPlanApiKeys();
   const keyFamily = families.find(item => keys[item].length);
-  if (keyFamily) {
-    const { key } = keys[keyFamily][0];
-    out.apiKey = { family: keyFamily, last4: key.slice(-4), fingerprint: fingerprint('key', keyFamily, key) };
-  }
+  if (keyFamily) out.apiKey = { family: keyFamily, last4: keys[keyFamily][0].key.slice(-4) };
   return out;
 }

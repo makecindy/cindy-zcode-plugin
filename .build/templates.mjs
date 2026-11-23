@@ -83,17 +83,7 @@ export function saveCodingPlanKey(family, apiKey, file = zcodePersonalProviderPa
   const table = readBuiltinTable()?.table;
   const template = codingPlanKeyTemplates(table)[family];
   if (!template) throw new Error('unsupported');
-  let current = { schemaVersion: 1, config: { providerConfigRules: { providerRules: [] } } };
-  let text;
-  try { text = readFileSync(file, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  if (text !== undefined) {
-    current = JSON.parse(text);
-    if (!current || typeof current !== 'object' || Array.isArray(current)) throw new Error('Unreadable provider file');
-  }
-  const config = current.config && typeof current.config === 'object' ? current.config : {};
-  const rulesHolder = config.providerConfigRules && typeof config.providerConfigRules === 'object' ? config.providerConfigRules : {};
-  const rules = (Array.isArray(rulesHolder.providerRules) ? rulesHolder.providerRules : [])
-    .filter(rule => withProviderTemplate(rule, table)?.config?.access?.type !== 'zhipu-coding-plan-api-key');
+  const { current, config, rulesHolder, rules } = providerFileWithoutKeys(file, table);
   rules.push({
     providerId: template.templateId,
     templateId: template.templateId,
@@ -106,11 +96,42 @@ export function saveCodingPlanKey(family, apiKey, file = zcodePersonalProviderPa
       modelOrder: [],
     },
   });
-  const next = { ...current, config: { ...config, providerConfigRules: { ...rulesHolder, providerRules: rules } } };
+  writeJson(file, { ...current, config: { ...config, providerConfigRules: { ...rulesHolder, providerRules: rules } } });
+}
+
+/**
+ * Removes this ZCode home's Coding Plan API keys (after the account signed in
+ * with the browser instead). Returns whether the file changed.
+ */
+export function clearCodingPlanKeys(file = zcodePersonalProviderPath()) {
+  const { exists, current, config, rulesHolder, rules, removed } = providerFileWithoutKeys(file, readBuiltinTable()?.table);
+  if (!exists || !removed) return false;
+  writeJson(file, { ...current, config: { ...config, providerConfigRules: { ...rulesHolder, providerRules: rules } } });
+  return true;
+}
+
+// The personal provider file with its Coding Plan key providers taken out. An
+// unreadable file throws rather than being replaced.
+function providerFileWithoutKeys(file, table) {
+  let current = { schemaVersion: 1, config: { providerConfigRules: { providerRules: [] } } };
+  let text;
+  try { text = readFileSync(file, 'utf8'); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (text !== undefined) {
+    current = JSON.parse(text);
+    if (!current || typeof current !== 'object' || Array.isArray(current)) throw new Error('Unreadable provider file');
+  }
+  const config = current.config && typeof current.config === 'object' ? current.config : {};
+  const rulesHolder = config.providerConfigRules && typeof config.providerConfigRules === 'object' ? config.providerConfigRules : {};
+  const all = Array.isArray(rulesHolder.providerRules) ? rulesHolder.providerRules : [];
+  const rules = all.filter(rule => withProviderTemplate(rule, table)?.config?.access?.type !== 'zhipu-coding-plan-api-key');
+  return { exists: text !== undefined, current, config, rulesHolder, rules, removed: rules.length !== all.length };
+}
+
+function writeJson(file, value) {
   mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   const temporary = `${file}.${randomUUID()}.tmp`;
   try {
-    writeFileSync(temporary, JSON.stringify(next, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+    writeFileSync(temporary, JSON.stringify(value, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
     renameSync(temporary, file);
   } finally {
     try { unlinkSync(temporary); } catch { /* Renamed. */ }

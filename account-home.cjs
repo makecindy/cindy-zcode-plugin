@@ -33,17 +33,33 @@ function defaultZcodeHome(env) {
   return path.resolve(home, HOME_NAME);
 }
 
+const foldCase = process.platform === 'win32' || process.platform === 'darwin';
+function comparable(value) {
+  const resolved = path.resolve(value);
+  return foldCase ? resolved.toLowerCase() : resolved;
+}
+
 function samePath(a, b) {
-  const left = path.resolve(a);
-  const right = path.resolve(b);
-  return process.platform === 'win32' || process.platform === 'darwin'
-    ? left.toLowerCase() === right.toLowerCase()
-    : left === right;
+  return comparable(a) === comparable(b);
 }
 
 function inside(child, parent) {
-  const rel = path.relative(path.resolve(parent), path.resolve(child));
+  const rel = path.relative(comparable(parent), comparable(child));
   return rel === '' || (!!rel && !rel.startsWith('..') && !path.isAbsolute(rel));
+}
+
+/**
+ * The real location of a path, following symbolic links and Windows junctions in every
+ * component. A part that does not exist yet keeps its name under its parent's real location.
+ */
+function realLocation(value) {
+  const resolved = path.resolve(value);
+  try {
+    return fs.realpathSync.native(resolved);
+  } catch {
+    const parent = path.dirname(resolved);
+    return parent === resolved ? resolved : path.join(realLocation(parent), path.basename(resolved));
+  }
 }
 
 /**
@@ -61,11 +77,17 @@ function checkAccountDir(raw, env = process.env) {
   try { stat = fs.statSync(dir); } catch { return { error: 'The account directory does not exist.' }; }
   if (!stat.isDirectory()) return { error: 'The account directory is not a directory.' };
   const home = path.join(dir, HOME_NAME);
-  const original = defaultZcodeHome(env);
   // `<dir>/.zcode` must be a home of its own: never the original login's tree, nor inside it.
-  if (samePath(home, original) || inside(home, original) || inside(original, home)) {
+  // Compared by real location, so a linked account folder (or a linked parent, or a linked
+  // `.zcode`) cannot lead back to the original login.
+  const ownReal = realLocation(home);
+  const originalReal = realLocation(defaultZcodeHome(env));
+  if (samePath(ownReal, originalReal) || inside(ownReal, originalReal) || inside(originalReal, ownReal)) {
     return { error: 'The account directory would use the original ZCode login.' };
   }
+  try {
+    if (fs.lstatSync(home).isSymbolicLink()) return { error: 'The account ZCode folder is a link.' };
+  } catch { /* Not created yet. */ }
   return { dir, home };
 }
 

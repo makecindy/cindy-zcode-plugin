@@ -96,9 +96,11 @@ async function workerFixture(t) {
     await fs.rm(tmp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }).catch(() => {});
   });
   const replies = new Map();
+  const notifications = [];
   readline.createInterface({ input: worker.stdout }).on('line', line => {
     const message = JSON.parse(line);
     if (message.id != null) replies.get(message.id)?.(message);
+    else if (message.method !== 'progress') notifications.push(message);
   });
   let next = 0;
   const call = (method, params) => new Promise((resolve, reject) => {
@@ -111,11 +113,11 @@ async function workerFixture(t) {
     await fs.mkdir(path.join(dir, '.zcode', 'v2'), { recursive: true });
     await fs.writeFile(path.join(dir, '.zcode', 'v2', 'credentials.json'), JSON.stringify(store));
   };
-  return { tmp, home, cli, call, credentials };
+  return { tmp, home, cli, call, credentials, notifications };
 }
 
 test('accountStatus reports the name and email of the account in its own directory', async t => {
-  const { tmp, home, call, credentials } = await workerFixture(t);
+  const { tmp, home, call, credentials, notifications } = await workerFixture(t);
   // The original login (the user's ZCode home) and an account Cindy added.
   await credentials(home, {
     'oauth:active_provider': 'bigmodel',
@@ -134,11 +136,16 @@ test('accountStatus reports the name and email of the account in its own directo
   assert.match(added.fingerprint, /^[0-9a-f]{32}$/);
   assert.deepEqual(added.models, []);
 
+  // main.js learns the account's models (to list them for the engine) from this.
+  assert.deepEqual(notifications.filter(message => message.method === 'account-models'),
+    [{ jsonrpc: '2.0', method: 'account-models', params: { dir: account, models: [] } }]);
+
   const original = await call('accountStatus', { harnessId: 'zcode' });
   assert.equal(original.state, 'signed-in');
   assert.deepEqual(original.identity, { name: 'Original User' });
   assert.notEqual(original.fingerprint, added.fingerprint);
-  assert.equal('models' in original, false);
+  // The engine lists the added accounts' models too, so the original login names its own.
+  assert.deepEqual(original.models, []);
   // The settings page keeps its own view of the original login, still without the email.
   assert.deepEqual(await call('account', {}), { signedIn: true, family: 'bigmodel', name: 'Original User', plan: 'absent', signIn: 'cli' });
 
@@ -146,7 +153,11 @@ test('accountStatus reports the name and email of the account in its own directo
   const empty = path.join(tmp, 'accounts', 'cindy-b');
   await fs.mkdir(empty, { recursive: true });
   assert.deepEqual(await call('accountStatus', { harnessId: 'zcode', accountDir: empty }), { state: 'signed-out' });
-  assert.equal(await call('accountStatus', { harnessId: 'zcode', accountDir: path.join(tmp, 'accounts', 'missing') }), null);
+  const missing = path.join(tmp, 'accounts', 'missing');
+  assert.equal(await call('accountStatus', { harnessId: 'zcode', accountDir: missing }), null);
+  // A removed account folder is forgotten.
+  assert.ok(notifications.some(message => message.method === 'account-models'
+    && message.params.dir === missing && message.params.removed === true));
   assert.equal(await call('accountStatus', { harnessId: 'zcode', accountDir: home }), null);
   assert.equal(await call('accountStatus', { harnessId: 'other', accountDir: account }), null);
   assert.equal(await call('usage', { harnessId: 'zcode', accountDir: empty }), null);
@@ -178,12 +189,24 @@ else {
   console.log(JSON.stringify({ status: 'ready' }));
 }
 `);
+  // The account used a Coding Plan API key before; signing in replaces it.
+  const keyRule = (providerId, apiKey) => ({ providerId, templateId: providerId, providerName: 'BigModel Coding Plan', config: {
+    access: { type: 'zhipu-coding-plan-api-key', apiKey }, api: { baseUrl: 'https://open.bigmodel.cn/api/anthropic' },
+  } });
+  const providers = (dir, rules) => fs.mkdir(path.join(dir, '.zcode', 'v2'), { recursive: true }).then(() =>
+    fs.writeFile(path.join(dir, '.zcode', 'v2', 'provider_config.json'), JSON.stringify({ schemaVersion: 1, config: {
+      providerConfigRules: { providerRules: rules } } })));
   const account = path.join(tmp, 'accounts', 'cindy-browser');
-  await fs.mkdir(account, { recursive: true });
+  await providers(account, [keyRule('bigmodel-api', 'old-key-1234'), { providerId: 'custom', config: { access: { type: 'api-key' } } }]);
+  assert.deepEqual((await call('accountStatus', { harnessId: 'zcode', accountDir: account })).identity,
+    { detail: 'BigModel API Key ····1234' });
   assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', accountDir: account, methodId: 'bigmodel-browser' }), { ok: true });
   const status = await call('accountStatus', { harnessId: 'zcode', accountDir: account });
   assert.equal(status.state, 'signed-in');
   assert.deepEqual(status.identity, { email: 'second@example.com', name: 'Second User' });
+  assert.match(status.fingerprint, /^[0-9a-f]{32}$/);
+  const kept = JSON.parse(await fs.readFile(path.join(account, '.zcode', 'v2', 'provider_config.json'), 'utf8'));
+  assert.deepEqual(kept.config.providerConfigRules.providerRules.map(rule => rule.providerId), ['custom']);
 
   const waiting = path.join(tmp, 'accounts', 'cindy-waiting');
   await fs.mkdir(waiting, { recursive: true });
@@ -197,6 +220,33 @@ else {
   assert.deepEqual(await call('accountLoginCancel', { harnessId: 'zcode', accountDir: waiting }), { ok: true });
   assert.deepEqual(await pending, { ok: false, error: 'cancelled' });
   assert.equal(await fs.readFile(path.join(home, '.zcode', 'v2', 'credentials.json'), 'utf8'), original);
+
+  // The original login (shared with ZCode desktop) is never switched between a
+  // key and a sign-in here, and its credentials are never removed.
+  await providers(home, [keyRule('bigmodel-api', 'desktop-key-5678')]);
+  const desktopProviders = await fs.readFile(path.join(home, '.zcode', 'v2', 'provider_config.json'), 'utf8');
+  assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', methodId: 'bigmodel-browser' }),
+    { ok: false, error: 'unsupported', message: 'ZCode uses a Coding Plan API key here. Change it in ZCode.' });
+  assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', methodId: 'bigmodel-key', secret: 'new-key-0000' }),
+    { ok: false, error: 'unsupported', message: 'Add API keys of the original ZCode login in ZCode.' });
+  assert.equal(await fs.readFile(path.join(home, '.zcode', 'v2', 'provider_config.json'), 'utf8'), desktopProviders);
+  assert.equal(await fs.readFile(path.join(home, '.zcode', 'v2', 'credentials.json'), 'utf8'), original);
+});
+
+test('ZCode stays available without a usable original login, so accounts can be added', async t => {
+  const { tmp, cli, call } = await workerFixture(t);
+  await fs.writeFile(cli, `if (process.argv.includes('--version')) console.log('0.17.1');\n`);
+  const kept = path.join(tmp, 'accounts', 'cindy-kept');
+  await fs.mkdir(kept, { recursive: true });
+  const detected = await call('detect', { accountDirs: [kept, path.join(tmp, 'accounts', 'removed'), path.join(tmp, 'home')] });
+  assert.equal(detected.available, true);
+  assert.equal(detected.reason, 'sign-in-required');
+  assert.deepEqual(detected.models, []);
+  assert.equal(detected.signIn, 'cli');
+  // Only folders that are still added accounts of their own come back.
+  assert.deepEqual(detected.accountDirs, [kept]);
+  // With nothing to run, the original login is signed out (not merely unknown).
+  assert.deepEqual(await call('accountStatus', { harnessId: 'zcode' }), { state: 'signed-out' });
 });
 
 test('turn failures say whether the account is used up, signed out or busy', async t => {

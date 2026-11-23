@@ -121,13 +121,18 @@ test('an API key login writes the key only into the account directory', async t 
   await fs.writeFile(path.join(home, '.zcode', 'v2', 'provider_config.json'), JSON.stringify({ schemaVersion: 1, config: {
     providerConfigRules: { providerRules: [provider('bigmodel-api', 'BigModel Coding Plan', 'original-key')] },
   } }));
-  const account = path.join(tmp, 'accounts', 'cindy-key');
-  await fs.mkdir(account, { recursive: true });
+  const accounts = path.join(tmp, 'accounts');
+  const account = path.join(accounts, 'cindy-key');
+  // The account was signed in with the browser before; the key replaces that sign-in.
+  await fs.mkdir(path.join(account, '.zcode', 'v2'), { recursive: true });
+  const signIn = path.join(account, '.zcode', 'v2', 'credentials.json');
+  await fs.writeFile(signIn, JSON.stringify({ 'oauth:active_provider': 'bigmodel', 'oauth:bigmodel:access_token': 'fixture',
+    'oauth:bigmodel:user_info': JSON.stringify({ id: 'b-9', displayName: 'Browser User' }) }));
   const snapshot = async () => {
     const files = {};
     for (const entry of await fs.readdir(tmp, { recursive: true, withFileTypes: true })) {
       const file = path.join(entry.parentPath ?? entry.path, entry.name);
-      if (entry.isFile() && !file.startsWith(account + path.sep)) files[path.relative(tmp, file)] = await fs.readFile(file, 'utf8');
+      if (entry.isFile() && !file.startsWith(accounts + path.sep)) files[path.relative(tmp, file)] = await fs.readFile(file, 'utf8');
     }
     return files;
   };
@@ -167,12 +172,37 @@ test('an API key login writes the key only into the account directory', async t 
   assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', accountDir: account, methodId: 'bigmodel-key', secret: 'two words' }),
     { ok: false, error: 'invalid-secret' });
   assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', methodId: 'bigmodel-key', secret: 'fixture-key-abcd' }),
-    { ok: false, error: 'unsupported' });
+    { ok: false, error: 'unsupported', message: 'Add API keys of the original ZCode login in ZCode.' });
   assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', accountDir: home, methodId: 'bigmodel-key', secret: 'fixture-key-abcd' }),
     { ok: false, error: 'failed', message: 'The account folder cannot be used.' });
+  // Links do not lead back to the original login either: a linked account
+  // folder, or one under a linked parent folder (junctions on Windows).
+  const linkedHome = path.join(tmp, 'linked-home');
+  const linkedParent = path.join(tmp, 'linked-parent');
+  await fs.symlink(home, linkedHome, 'junction');
+  await fs.symlink(tmp, linkedParent, 'junction');
+  for (const dir of [linkedHome, path.join(linkedParent, 'home')]) {
+    assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', accountDir: dir, methodId: 'bigmodel-key', secret: 'fixture-key-abcd' }),
+      { ok: false, error: 'failed', message: 'The account folder cannot be used.' }, dir);
+    assert.equal(await call('accountStatus', { harnessId: 'zcode', accountDir: dir }), null, dir);
+  }
 
+  // Cancelled before the key is written: nothing is saved.
+  const cancelled = path.join(accounts, 'cindy-cancelled');
+  await fs.mkdir(cancelled, { recursive: true });
+  const loginId = ++next;
+  const loginResult = new Promise(resolve => replies.set(loginId, resolve));
+  worker.stdin.write([
+    { jsonrpc: '2.0', id: loginId, method: 'accountLogin', params: { harnessId: 'zcode', accountDir: cancelled, methodId: 'bigmodel-key', secret: 'fixture-key-abcd' } },
+    { jsonrpc: '2.0', id: ++next, method: 'accountLoginCancel', params: { harnessId: 'zcode', accountDir: cancelled } },
+  ].map(message => JSON.stringify(message)).join('\n') + '\n');
+  assert.deepEqual(await loginResult, { ok: false, error: 'cancelled' });
+  await assert.rejects(fs.stat(path.join(cancelled, '.zcode', 'v2', 'provider_config.json')), { code: 'ENOENT' });
+
+  assert.equal((await call('accountStatus', { harnessId: 'zcode', accountDir: account })).identity.name, 'Browser User');
   assert.deepEqual(await call('accountLogin', { harnessId: 'zcode', accountDir: account, methodId: 'bigmodel-key', secret: ' fixture-key-abcd\n' }),
     { ok: true });
+  await assert.rejects(fs.stat(signIn), { code: 'ENOENT' }, 'the previous browser sign-in of the account is removed');
   assert.deepEqual((await saved()).config.providerConfigRules.providerRules, [{
     providerId: 'bigmodel-api', templateId: 'bigmodel-api', providerName: 'BigModel Coding Plan',
     config: { group: 'standard-personal', access: { type: 'zhipu-coding-plan-api-key', apiKey: 'fixture-key-abcd' },
@@ -181,7 +211,8 @@ test('an API key login writes the key only into the account directory', async t 
   const status = await call('accountStatus', { harnessId: 'zcode', accountDir: account });
   assert.equal(status.state, 'signed-in');
   assert.deepEqual(status.identity, { detail: 'BigModel API Key ····abcd' });
-  assert.match(status.fingerprint, /^[0-9a-f]{32}$/);
+  // Nothing is derived from the key but its last four characters.
+  assert.equal('fingerprint' in status, false);
   assert.deepEqual([...status.models].sort(), [
     'account:bigmodel-individual-coding-plan\\GLM-5.3', 'bigmodel-api\\GLM-5.3', 'bigmodel-api\\GLM-5.3-Flash',
   ]);
@@ -193,7 +224,6 @@ test('an API key login writes the key only into the account directory', async t 
   assert.deepEqual(rules.map(rule => [rule.providerId, rule.config.access.apiKey]), [['zai-api', 'fixture-key-wxyz']]);
   const replaced = await call('accountStatus', { harnessId: 'zcode', accountDir: account });
   assert.deepEqual(replaced.identity, { detail: 'Z.ai API Key ····wxyz' });
-  assert.notEqual(replaced.fingerprint, status.fingerprint);
 
   assert.deepEqual(await snapshot(), before);
   assert.ok(!output.includes('fixture-key-abcd') && !output.includes('fixture-key-wxyz'), 'the key never appears in worker output');

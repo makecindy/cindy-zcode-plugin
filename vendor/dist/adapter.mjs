@@ -23095,7 +23095,7 @@ function ndJsonStream(output2, input2, options = {}) {
   let cancelled = false;
   let inputReader;
   let outputWrite = Promise.resolve();
-  const writeJson = (message) => {
+  const writeJson2 = (message) => {
     const content = JSON.stringify(message) + "\n";
     const write = outputWrite.then(async () => {
       const writer = output2.getWriter();
@@ -23121,13 +23121,13 @@ function ndJsonStream(output2, input2, options = {}) {
         try {
           message = JSON.parse(trimmedLine);
         } catch {
-          await writeJson(protocolErrorResponse(RequestError.parseError()));
+          await writeJson2(protocolErrorResponse(RequestError.parseError()));
           return;
         }
         if (isRecord(message) || Array.isArray(message)) {
           controller.enqueue(message);
         } else {
-          await writeJson(protocolErrorResponse(RequestError.invalidRequest(message)));
+          await writeJson2(protocolErrorResponse(RequestError.invalidRequest(message)));
         }
       };
       const reader = input2.getReader();
@@ -23185,7 +23185,7 @@ function ndJsonStream(output2, input2, options = {}) {
   });
   const writable = new WritableStream({
     write(message) {
-      return writeJson(message);
+      return writeJson2(message);
     }
   });
   return { readable, writable };
@@ -25599,9 +25599,9 @@ function decryptV2Os(value, key) {
   const colon = rest.indexOf(":");
   if (colon === -1)
     throw new Error("credential_decrypt_malformed");
-  const fingerprint2 = rest.slice(0, colon);
+  const fingerprint = rest.slice(0, colon);
   const expected = createHash("sha256").update(key).digest("hex").slice(0, 24);
-  if (fingerprint2 !== expected)
+  if (fingerprint !== expected)
     throw new Error("credential_decrypt_key_mismatch");
   const parts = rest.slice(colon + 1).split(".");
   if (parts.length !== 3)
@@ -25619,12 +25619,12 @@ function decryptV2Os(value, key) {
   }
 }
 function encryptV2Os(value, key) {
-  const fingerprint2 = createHash("sha256").update(key).digest("hex").slice(0, 24);
+  const fingerprint = createHash("sha256").update(key).digest("hex").slice(0, 24);
   const iv = randomBytes(12);
   const cipher = createCipheriv(CIPHER_ALGORITHM, key, iv);
   const cipherText = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return `${V2_OS_PREFIX}${fingerprint2}:${[
+  return `${V2_OS_PREFIX}${fingerprint}:${[
     iv.toString("base64url"),
     tag.toString("base64url"),
     cipherText.toString("base64url")
@@ -27398,6 +27398,28 @@ function saveCodingPlanKey(family, apiKey, file2 = zcodePersonalProviderPath()) 
   const table = readBuiltinTable()?.table;
   const template = codingPlanKeyTemplates(table)[family];
   if (!template) throw new Error("unsupported");
+  const { current, config: config2, rulesHolder, rules } = providerFileWithoutKeys(file2, table);
+  rules.push({
+    providerId: template.templateId,
+    templateId: template.templateId,
+    providerName: printableName(template.providerName) ?? (family === "zai" ? "Z.ai Coding Plan" : "BigModel Coding Plan"),
+    config: {
+      group: "standard-personal",
+      access: { type: "zhipu-coding-plan-api-key", apiKey: key },
+      api: { baseUrl: template.config.api.baseUrl },
+      personalModelIds: [],
+      modelOrder: []
+    }
+  });
+  writeJson(file2, { ...current, config: { ...config2, providerConfigRules: { ...rulesHolder, providerRules: rules } } });
+}
+function clearCodingPlanKeys(file2 = zcodePersonalProviderPath()) {
+  const { exists, current, config: config2, rulesHolder, rules, removed } = providerFileWithoutKeys(file2, readBuiltinTable()?.table);
+  if (!exists || !removed) return false;
+  writeJson(file2, { ...current, config: { ...config2, providerConfigRules: { ...rulesHolder, providerRules: rules } } });
+  return true;
+}
+function providerFileWithoutKeys(file2, table) {
   let current = { schemaVersion: 1, config: { providerConfigRules: { providerRules: [] } } };
   let text2;
   try {
@@ -27411,24 +27433,15 @@ function saveCodingPlanKey(family, apiKey, file2 = zcodePersonalProviderPath()) 
   }
   const config2 = current.config && typeof current.config === "object" ? current.config : {};
   const rulesHolder = config2.providerConfigRules && typeof config2.providerConfigRules === "object" ? config2.providerConfigRules : {};
-  const rules = (Array.isArray(rulesHolder.providerRules) ? rulesHolder.providerRules : []).filter((rule) => withProviderTemplate(rule, table)?.config?.access?.type !== "zhipu-coding-plan-api-key");
-  rules.push({
-    providerId: template.templateId,
-    templateId: template.templateId,
-    providerName: printableName(template.providerName) ?? (family === "zai" ? "Z.ai Coding Plan" : "BigModel Coding Plan"),
-    config: {
-      group: "standard-personal",
-      access: { type: "zhipu-coding-plan-api-key", apiKey: key },
-      api: { baseUrl: template.config.api.baseUrl },
-      personalModelIds: [],
-      modelOrder: []
-    }
-  });
-  const next = { ...current, config: { ...config2, providerConfigRules: { ...rulesHolder, providerRules: rules } } };
+  const all = Array.isArray(rulesHolder.providerRules) ? rulesHolder.providerRules : [];
+  const rules = all.filter((rule) => withProviderTemplate(rule, table)?.config?.access?.type !== "zhipu-coding-plan-api-key");
+  return { exists: text2 !== void 0, current, config: config2, rulesHolder, rules, removed: rules.length !== all.length };
+}
+function writeJson(file2, value) {
   mkdirSync2(path9.dirname(file2), { recursive: true, mode: 448 });
   const temporary = `${file2}.${randomUUID()}.tmp`;
   try {
-    writeFileSync(temporary, JSON.stringify(next, null, 2) + "\n", { flag: "wx", mode: 384 });
+    writeFileSync(temporary, JSON.stringify(value, null, 2) + "\n", { flag: "wx", mode: 384 });
     renameSync(temporary, file2);
   } finally {
     try {
@@ -56582,8 +56595,8 @@ function readAccount() {
   const name = displayName(store[`oauth:${family}:user_info`]);
   return { signedIn: true, family, ...name ? { name } : {}, ...keys };
 }
-function fingerprint(kind, family, id) {
-  return createHash6("sha256").update(`cindy-zcode:${kind}:${family}:${id}`).digest("hex").slice(0, 32);
+function userFingerprint(family, userId) {
+  return createHash6("sha256").update(`cindy-zcode:user:${family}:${userId}`).digest("hex").slice(0, 32);
 }
 function readAccountIdentity() {
   const store = readCredentialStoreSync();
@@ -56593,21 +56606,17 @@ function readAccountIdentity() {
     const info = userInfo2(store[`oauth:${family}:user_info`]) ?? {};
     const address = email3(info.email) ?? email3(info.rawProfile?.email) ?? email3(info.username);
     const name = printable(info.displayName) ?? (email3(info.username) ? void 0 : printable(info.username)) ?? printable(info.name) ?? printable(info.rawProfile?.name);
-    const plan = `account:${family}-individual-coding-plan`;
-    const id = [info.id, info.userId, info.uid, info.rawProfile?.id, store[`account-provider:${plan}:identity`]].map((value) => typeof value === "number" && Number.isFinite(value) ? String(value) : printable(value, 256)).find(Boolean) ?? address?.toLowerCase() ?? name;
+    const userId = [info.id, info.userId, info.uid, info.rawProfile?.id].map((value) => typeof value === "number" && Number.isFinite(value) ? String(value) : printable(value, 256)).find(Boolean) ?? address?.toLowerCase();
     out.oauth = {
       family,
       ...name ? { name } : {},
       ...address ? { email: address } : {},
-      ...id ? { fingerprint: fingerprint("oauth", family, id) } : {}
+      ...userId ? { fingerprint: userFingerprint(family, userId) } : {}
     };
   }
   const keys = codingPlanApiKeys();
   const keyFamily = families.find((item) => keys[item].length);
-  if (keyFamily) {
-    const { key } = keys[keyFamily][0];
-    out.apiKey = { family: keyFamily, last4: key.slice(-4), fingerprint: fingerprint("key", keyFamily, key) };
-  }
+  if (keyFamily) out.apiKey = { family: keyFamily, last4: keys[keyFamily][0].key.slice(-4) };
   return out;
 }
 
@@ -56633,6 +56642,7 @@ export {
   buildInitialConfigOptions,
   builtinProviderEnv,
   classifyAccountError,
+  clearCodingPlanKeys,
   codingPlanKeyTemplates,
   describeEfforts,
   readAccount,

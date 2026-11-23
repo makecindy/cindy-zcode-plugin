@@ -74,6 +74,19 @@ async function probe(mode, account = null, args = []) {
   }
 }
 
+// Models of the accounts Cindy added, for main.js to list them next to the
+// original login's (it keeps them in the plugin's /kv). Sent when they change.
+const announced = new Map();
+function announceAccount(dir, models) {
+  const list = Array.isArray(models) ? models.filter(model => model && typeof model.id === 'string').slice(0, 200) : null;
+  const text = list ? JSON.stringify(list) : 'removed';
+  if (announced.get(dir) === text) return;
+  announced.delete(dir);
+  announced.set(dir, text);
+  while (announced.size > ACCOUNT_CACHE_MAX) announced.delete(announced.keys().next().value);
+  send({ method: 'account-models', params: list ? { dir, models: list } : { dir, removed: true } });
+}
+
 // The settings page asks for the account and the usage at the same time. Both
 // come from one read, so each family's quota service sees one request. Cindy's
 // engine accounts read the same way, one entry per account directory.
@@ -86,10 +99,11 @@ function readAccountState(fresh, account = null) {
     return Promise.resolve(cached.value);
   }
   if (!accountReads.has(key)) {
-    const read = probe('account', account, account ? ['--models'] : []).then(value => {
+    const read = probe('account', account, ['--models']).then(value => {
       accountCache.delete(key);
       if (value) accountCache.set(key, { at: Date.now(), value });
       while (accountCache.size > ACCOUNT_CACHE_MAX) accountCache.delete(accountCache.keys().next().value);
+      if (account && value) announceAccount(account.dir, value.models);
       return value;
     }).finally(() => { accountReads.delete(key); });
     accountReads.set(key, read);
@@ -160,9 +174,15 @@ async function browserSignIn(family, account = null) {
     if (state.cancelled) return { ok: false, error: 'cancelled' };
     if (state.timedOut || /timed out/i.test(stderr)) return { ok: false, error: 'timeout' };
     if (code === 0 && lastJson(stdout)?.status === 'ready') {
-      // An added account's sign-in must have landed in its own folder.
-      if (account && !fs.existsSync(path.join(account.home, 'v2', 'credentials.json'))) {
+      if (!account) return { ok: true };
+      // An added account's sign-in must have landed in its own folder, and it
+      // replaces the API key the account had, so the identity Cindy shows is the
+      // one that is billed.
+      if (!fs.existsSync(path.join(account.home, 'v2', 'credentials.json'))) {
         return { ok: false, error: 'failed', detail: 'ZCode did not save this sign-in in the account folder.' };
+      }
+      if ((await probe('clear-keys', account))?.ok !== true) {
+        return { ok: false, error: 'failed', detail: 'Signed in, but the previous API key of this account could not be removed.' };
       }
       return { ok: true };
     }
@@ -212,10 +232,19 @@ const METHODS = {
 const keyShape = /^[!-~]{1,4096}$/;
 
 // undefined: the original login; null: unusable; else the checked { dir, home }.
+// A folder Cindy has since removed (the account was removed) is forgotten.
 function accountParam(params) {
   if (params?.accountDir === undefined) return undefined;
   const account = accountHome.checkAccountDir(params.accountDir, process.env);
+  if (account.error && typeof params.accountDir === 'string' && path.isAbsolute(params.accountDir)
+    && !fs.existsSync(params.accountDir)) announceAccount(path.resolve(params.accountDir), null);
   return account.error ? null : account;
+}
+
+// The account folders main.js remembers that still exist, as it gave them.
+function liveAccountDirs(dirs) {
+  if (!Array.isArray(dirs)) return undefined;
+  return dirs.slice(0, 64).filter(dir => !accountHome.checkAccountDir(dir, process.env).error);
 }
 
 function plainText(value, max) {
@@ -237,12 +266,14 @@ function accountStatusFrom(state, added) {
   const oauth = state.identity?.oauth;
   const key = state.identity?.apiKey;
   const plan = planName(state);
-  const extra = {
-    ...(plan ? { plan } : {}),
-    // Model values are per ZCode home (provider id + model id); an added home can offer fewer.
-    ...(added && Array.isArray(state.models) ? { models: state.models.filter(id => plainText(id, 256)).slice(0, 200) } : {}),
-  };
-  if (account.signedIn && families.has(account.family)) {
+  // Model values are per ZCode home (provider id + model id), and the engine
+  // lists the original login's and the added accounts' together, so each
+  // account says which of them it offers.
+  const models = Array.isArray(state.models)
+    ? state.models.map(model => model?.id).filter(id => plainText(id, 256)).slice(0, 200) : undefined;
+  const extra = { ...(plan ? { plan } : {}), ...(models ? { models } : {}) };
+  const signedIn = () => {
+    if (!account.signedIn || !families.has(account.family)) return null;
     const own = oauth?.family === account.family ? oauth : {};
     const email = plainText(own.email, 254);
     const name = plainText(own.name, 80);
@@ -252,16 +283,17 @@ function accountStatusFrom(state, added) {
       state: 'signed-in', identity,
       ...(plainText(own.fingerprint, 128) ? { fingerprint: own.fingerprint } : {}), ...extra,
     };
-  }
-  if (key && families.has(key.family) && typeof key.last4 === 'string' && /^[!-~]{1,4}$/.test(key.last4)) {
-    return {
-      state: 'signed-in', identity: { detail: `${platformName(key.family)} API Key ····${key.last4}` },
-      ...(plainText(key.fingerprint, 128) ? { fingerprint: key.fingerprint } : {}), ...extra,
-    };
-  }
-  // The original home may run on other providers configured in ZCode: unknown,
-  // not signed out (ZCode reports itself unavailable when it has no model).
-  return added ? { state: 'signed-out' } : null;
+  };
+  // No fingerprint for a key: there is no public account id behind it.
+  const keyed = () => (key && families.has(key.family) && typeof key.last4 === 'string' && /^[!-~]{1,4}$/.test(key.last4)
+    ? { state: 'signed-in', identity: { detail: `${platformName(key.family)} API Key ····${key.last4}` }, ...extra }
+    : null);
+  // Requests use a key before a sign-in; an added account holds only one of them.
+  const status = added ? keyed() ?? signedIn() : signedIn() ?? keyed();
+  if (status) return status;
+  // The original home may run on other providers configured in ZCode.
+  if (!added && models?.length) return { state: 'signed-in', identity: { detail: 'ZCode' }, ...extra };
+  return { state: 'signed-out' };
 }
 
 async function accountStatus(params) {
@@ -272,26 +304,58 @@ async function accountStatus(params) {
   return accountStatusFrom(state, !!account);
 }
 
-async function saveKey(family, secret, account) {
+// Saves the key through run.mjs in two steps: the key, then `commit` once the
+// sign-in has not been cancelled. Cancelling before that writes nothing.
+async function saveKey(family, secret, account, state) {
+  if (state.cancelled) return { ok: false, error: 'cancelled' };
   const runtime = runtimeFor(account);
   if (runtime.reason) return { ok: false, error: 'unsupported' };
   accountHome.prepareAccountHome(account);
   const child = spawn(runtime.node, [runner, '--save-key', family], {
     env: runtime.env, stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true,
   });
-  let stdout = '';
-  child.stdout.on('data', chunk => { if (stdout.length < 4096) stdout += chunk; });
   child.stdin.on('error', () => {});
-  child.stdin.end(secret);
+  let committed = false;
+  state.child = {
+    stop() {
+      try { child.stdin.end(); } catch { /* exited */ }
+      setTimeout(() => child.kill(), 3000).unref();
+    },
+  };
   const timer = setTimeout(() => child.kill(), 20000);
-  const code = await new Promise(resolve => {
-    child.on('error', () => resolve(-1));
-    child.on('close', resolve);
+  const result = await new Promise(resolve => {
+    let pending = '';
+    let final = null;
+    child.stdout.on('data', chunk => {
+      pending += chunk;
+      if (pending.length > 65536) pending = '';
+      let end;
+      while ((end = pending.indexOf('\n')) !== -1) {
+        const line = pending.slice(0, end).trim();
+        pending = pending.slice(end + 1);
+        let message;
+        try { message = JSON.parse(line); } catch { continue; }
+        if (message?.ready === true) {
+          if (state.cancelled) {
+            child.stdin.end();
+          } else {
+            committed = true;
+            child.stdin.end('commit\n');
+          }
+        } else if (typeof message?.ok === 'boolean') {
+          final = message;
+        }
+      }
+    });
+    child.on('error', () => resolve(null));
+    child.on('close', () => resolve(final));
+    child.stdin.write(secret + '\n');
   });
   clearTimeout(timer);
-  const result = code === 0 ? lastJson(stdout) : null;
   if (result?.ok === true) return { ok: true };
-  return { ok: false, error: ['unsupported', 'invalid-secret'].includes(result?.error) ? result.error : 'failed' };
+  if (state.cancelled && !committed) return { ok: false, error: 'cancelled' };
+  const error = ['cancelled', 'unsupported', 'invalid-secret'].includes(result?.error) ? result.error : 'failed';
+  return { ok: false, error, ...(plainText(result?.message, 200) ? { detail: result.message } : {}) };
 }
 
 async function accountLogin(params) {
@@ -301,24 +365,36 @@ async function accountLogin(params) {
   if (account === null) return { ok: false, error: 'failed', message: 'The account folder cannot be used.' };
   let result;
   if (method.kind === 'browser') {
+    if (!account) {
+      // The original login is the user's ZCode, shared with the desktop app: it
+      // is never switched from its API key to a sign-in here.
+      const current = await readAccountState(false).catch(() => null);
+      if (current?.identity?.apiKey || current?.account?.apiKeys?.length) {
+        return { ok: false, error: 'unsupported', message: 'ZCode uses a Coding Plan API key here. Change it in ZCode.' };
+      }
+    }
     result = await browserSignIn(method.family, account ?? null);
   } else {
     // A key is only ever written into an account Cindy added, never into the
     // original ZCode home that the desktop app shares.
-    if (!account) return { ok: false, error: 'unsupported' };
+    if (!account) return { ok: false, error: 'unsupported', message: 'Add API keys of the original ZCode login in ZCode.' };
     const secret = typeof params.secret === 'string' ? params.secret.trim() : '';
     if (!keyShape.test(secret)) return { ok: false, error: 'invalid-secret' };
     if (login) return { ok: false, error: 'busy' };
     const state = { cancelled: false, dir: account.dir };
     login = state;
     try {
-      result = await saveKey(method.family, secret, account);
+      result = await saveKey(method.family, secret, account, state);
     } finally {
       accountCache.delete(account.dir);
       if (login === state) login = null;
     }
   }
-  if (result.ok) return { ok: true };
+  if (result.ok) {
+    // Read the account again now, so its models reach the engine's list.
+    if (account) void readAccountState(true, account).catch(() => {});
+    return { ok: true };
+  }
   const error = ['cancelled', 'timeout', 'busy', 'unsupported', 'invalid-secret'].includes(result.error) ? result.error
     : result.error === 'not-installed' ? 'unsupported' : 'failed';
   const message = plainText(result.detail, 200);
@@ -375,13 +451,18 @@ readline.createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line
       return reply(request.id, { result: cancelSignIn() });
     case 'logout':
       return reply(request.id, { result: await signOut().catch(() => ({ ok: false, error: 'failed' })) });
-    case 'detect':
+    case 'detect': {
       checking ??= probe('detect').then(status => (status?.available
         // Whether `zcode login` can sign in here (a standalone CLI) or the desktop app must.
         ? { ...status, signIn: desktopApp(status.path) ? 'desktop' : 'cli' } : status))
         .finally(() => { checking = undefined; });
-      try { return reply(request.id, { result: await checking }); }
+      let status;
+      try { status = await checking; }
       catch { return reply(request.id, { error: { code: -32603, message: 'Could not check ZCode' } }); }
+      // Which of the added accounts main.js remembers still exist.
+      const accountDirs = liveAccountDirs(request.params?.accountDirs);
+      return reply(request.id, { result: status?.available && accountDirs ? { ...status, accountDirs } : status });
+    }
     default:
       return reply(request.id, { error: { code: -32601, message: 'Method not found' } });
   }
