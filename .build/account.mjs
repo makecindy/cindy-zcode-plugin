@@ -1,26 +1,39 @@
+import { createHash } from 'node:crypto';
 import { readCredentialStoreSync } from 'zcode-acp-server/dist/backend/credential-store.js';
 import { codingPlanApiKeys } from './templates.mjs';
 
-// ZCode keeps one OAuth sign-in at a time in its shared credential store: the
-// desktop app and `zcode login <family>` both replace the previous account.
+// ZCode keeps one OAuth sign-in at a time in its credential store: the desktop
+// app and `zcode login <family>` both replace the previous account of that
+// ZCode home. Accounts Cindy adds each have a home of their own.
 const families = ['bigmodel', 'zai'];
 
-function printable(value) {
+function printable(value, max = 80) {
   if (typeof value !== 'string') return undefined;
   const text = value.trim();
-  return text && text.length <= 80 && !/[\u0000-\u001f\u007f]/.test(text) ? text : undefined;
+  return text && text.length <= max && !/[\u0000-\u001f\u007f]/.test(text) ? text : undefined;
 }
 
-// BigModel stores { displayName, username }, Z.ai the profile { name, email }.
-// Only a display name leaves this function; tokens and email stay in the store.
-function displayName(raw) {
+const emailShape = /^[^\s@]{1,64}@[^\s@]{1,253}$/;
+function email(value) {
+  const text = printable(value, 254);
+  return text && emailShape.test(text) ? text : undefined;
+}
+
+function userInfo(raw) {
   try {
     const info = JSON.parse(raw);
-    return printable(info?.displayName) ?? printable(info?.username) ?? printable(info?.name) ??
-      printable(info?.rawProfile?.name);
+    return info && typeof info === 'object' && !Array.isArray(info) ? info : undefined;
   } catch {
     return undefined;
   }
+}
+
+// BigModel stores { displayName, username }, Z.ai the profile { name, email }.
+// readAccount() (the settings page) lets only a display name leave.
+function displayName(raw) {
+  const info = userInfo(raw);
+  return printable(info?.displayName) ?? printable(info?.username) ?? printable(info?.name) ??
+    printable(info?.rawProfile?.name);
 }
 
 // Platforms with a Coding Plan API key in ZCode's model settings. Such a key
@@ -30,14 +43,55 @@ function apiKeyPlatforms() {
   return families.filter(family => keys[family].length);
 }
 
-export function readAccount() {
-  const store = readCredentialStoreSync();
+function signedInFamily(store) {
   const signedIn = family => !!store[`oauth:${family}:access_token`]?.trim();
   const active = store['oauth:active_provider']?.trim();
-  const family = families.includes(active) && signedIn(active) ? active : families.find(signedIn);
+  return families.includes(active) && signedIn(active) ? active : families.find(signedIn);
+}
+
+export function readAccount() {
+  const store = readCredentialStoreSync();
+  const family = signedInFamily(store);
   const apiKeys = apiKeyPlatforms();
   const keys = apiKeys.length ? { apiKeys } : {};
   if (!family) return { signedIn: false, ...keys };
   const name = displayName(store[`oauth:${family}:user_info`]);
   return { signedIn: true, family, ...(name ? { name } : {}), ...keys };
+}
+
+// Opaque and stable per signed-in user, so Cindy recognises the same account
+// added twice. Derived only from the profile's public user id (or email), never
+// from a token or key; hashed so the id itself is not handed on.
+function userFingerprint(family, userId) {
+  return createHash('sha256').update(`cindy-zcode:user:${family}:${userId}`).digest('hex').slice(0, 32);
+}
+
+/**
+ * Who this ZCode home is signed in as, for Cindy's engine accounts: the OAuth
+ * user's name and email, and the platform and last four characters of a Coding
+ * Plan API key. Tokens and keys never leave this function, and nothing derived
+ * from them does except those four characters.
+ */
+export function readAccountIdentity() {
+  const store = readCredentialStoreSync();
+  const family = signedInFamily(store);
+  const out = {};
+  if (family) {
+    const info = userInfo(store[`oauth:${family}:user_info`]) ?? {};
+    const address = email(info.email) ?? email(info.rawProfile?.email) ?? email(info.username);
+    const name = printable(info.displayName) ?? (email(info.username) ? undefined : printable(info.username)) ??
+      printable(info.name) ?? printable(info.rawProfile?.name);
+    const userId = [info.id, info.userId, info.uid, info.rawProfile?.id]
+      .map(value => (typeof value === 'number' && Number.isFinite(value) ? String(value) : printable(value, 256)))
+      .find(Boolean) ?? address?.toLowerCase();
+    out.oauth = {
+      family, ...(name ? { name } : {}), ...(address ? { email: address } : {}),
+      ...(userId ? { fingerprint: userFingerprint(family, userId) } : {}),
+    };
+  }
+  // An API key account has no fingerprint: there is no public id to derive one from.
+  const keys = codingPlanApiKeys();
+  const keyFamily = families.find(item => keys[item].length);
+  if (keyFamily) out.apiKey = { family: keyFamily, last4: keys[keyFamily][0].key.slice(-4) };
+  return out;
 }

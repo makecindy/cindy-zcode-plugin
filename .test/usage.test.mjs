@@ -55,8 +55,24 @@ test('Coding Plan quota is read only from its own billing origin; Start Plan is 
   const active = await run('https://api.z.ai/api/anthropic', quota);
   assert.deepEqual(active.calls, [['https://api.z.ai/api/monitor/usage/quota/limit', 'error', true]]);
   assert.deepEqual(active.plans, { bigmodel: 'absent', zai: 'active' });
-  assert.deepEqual(active.usage.windows, [{ label: 'Z.ai · 5h', remainingPercent: 0, resetsAt: 1893456000000 }]);
+  assert.deepEqual(active.usage.windows, [{ label: 'Z.ai · 5h', remainingPercent: 0, resetsAt: 1893456000000, windowMinutes: 300 }]);
   assert.ok(active.usage.updatedAt > 0);
+});
+
+test('windows carry their length, the tool quota limits no model, and the plan tier is kept', async t => {
+  const run = await fixture(t);
+  const result = await run('https://api.z.ai/api/anthropic', { success: true, data: { level: 'pro', limits: [
+    { type: 'TIME_LIMIT', usage: 1000, currentValue: 1000, remaining: 0, nextResetTime: 1895000000000 },
+    { type: 'TOKENS_LIMIT', number: 7, percentage: 30, nextResetTime: 1894000000000 },
+    { type: 'TOKENS_LIMIT', number: 5, percentage: 10, nextResetTime: 1893456000000 },
+  ] } });
+  assert.deepEqual(result.usage.windows, [
+    { label: 'Z.ai · 5h', remainingPercent: 90, resetsAt: 1893456000000, windowMinutes: 300 },
+    { label: 'Z.ai · Week', remainingPercent: 70, resetsAt: 1894000000000, windowMinutes: 10080 },
+    // Used-up web search / reader calls must not stop Cindy from using the account's models.
+    { label: 'Z.ai · MCP', remainingPercent: 0, resetsAt: 1895000000000, models: [] },
+  ]);
+  assert.deepEqual(result.levels, { zai: 'pro' });
 });
 
 test('an account without a Coding Plan is reported as having none', async t => {

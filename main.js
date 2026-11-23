@@ -5,7 +5,8 @@
     'not-installed': ['请在这台电脑上安装 ZCode。', 'Install ZCode on this computer.'],
     'node-missing': ['请安装支持 SQLite 的 Node.js 22.13 或更高版本，再重新检测。', 'Install Node.js 22.13 or later with SQLite support, then check again.'],
     'not-runnable': ['找到了 ZCode，但启动失败。请确认本机的 ZCode 可以正常打开。', 'ZCode was found but could not start. Check that it opens on this computer.'],
-    'sign-in-required': ['请在 ZCode 插件设置里登录开通了 GLM Coding Plan 的智谱 BigModel 或 Z.ai 账号。', 'In the ZCode plugin settings, sign in with a BigModel or Z.ai account that has a GLM Coding Plan.'],
+    'sign-in-required': ['请在 ZCode 插件设置里登录开通了 GLM Coding Plan 的智谱 BigModel 或 Z.ai 账号，或在 Cindy 里为 ZCode 添加账号。',
+      'In the ZCode plugin settings, sign in with a BigModel or Z.ai account that has a GLM Coding Plan, or add an account to ZCode in Cindy.'],
     'no-models': ['这个账号没有能在 Cindy 里用的模型。请开通 GLM Coding Plan，或在 ZCode 里配置 API Key 后重新检测。ZCode 的 Start Plan 只能在 ZCode 桌面版里用。',
       'This account has no model Cindy can use. Subscribe to a GLM Coding Plan or add an API key in ZCode, then check again. ZCode Start Plan works only in the ZCode desktop app.'],
     'check-failed': ['本次检测失败，请重新检测。', 'The check failed. Please check again.'],
@@ -164,6 +165,117 @@
     const pair = hints[status.reason] || hints['check-failed'];
     return pair[locale === 'zh' ? 0 : 1];
   }
+  // Ways Cindy can add more ZCode accounts, each kept in a directory of its own
+  // (worker.cjs accountLogin). Browser sign-in needs a standalone CLI: the CLI
+  // inside the desktop app cannot sign in by itself. A Coding Plan API key needs
+  // the installed ZCode's key template. With none, Cindy only shows who the
+  // original login is.
+  const accountMethodLabels = {
+    'bigmodel-browser': ['智谱 BigModel 账号（浏览器登录）', 'BigModel account (browser sign-in)'],
+    'zai-browser': ['Z.ai 账号（浏览器登录）', 'Z.ai account (browser sign-in)'],
+    'bigmodel-key': ['智谱 BigModel Coding Plan API Key', 'BigModel Coding Plan API key'],
+    'zai-key': ['Z.ai Coding Plan API Key', 'Z.ai Coding Plan API key'],
+  };
+  function accountMethods(status) {
+    const label = id => accountMethodLabels[id][locale === 'zh' ? 0 : 1];
+    const methods = [];
+    if (status.signIn === 'cli') {
+      for (const family of ['bigmodel', 'zai']) methods.push({ id: family + '-browser', label: label(family + '-browser'), kind: 'browser' });
+    }
+    const keyFamilies = Array.isArray(status.apiKeyFamilies) ? status.apiKeyFamilies : [];
+    for (const family of ['bigmodel', 'zai']) {
+      if (keyFamilies.includes(family)) {
+        methods.push({ id: family + '-key', label: label(family + '-key'), kind: 'secret', secretLabel: label(family + '-key') });
+      }
+    }
+    return methods;
+  }
+  // Accounts Cindy added, as the worker reports them (`account-models`). Model
+  // values belong to one ZCode home, so their models join the engine's list,
+  // letting tasks on those accounts pick them. A bounded list in the plugin's
+  // /kv keeps them across restarts; the worker confirms on each check which
+  // account folders still exist.
+  const ACCOUNTS_KEY = 'engineAccounts';
+  const ACCOUNTS_MAX = 16;
+  const ACCOUNTS_BYTES = 48 * 1024;
+  let addedAccounts = [];
+  let accountsLoad;
+  let accountsSave = Promise.resolve();
+  const plain = (value, max) => typeof value === 'string' && !!value.trim() && value.length <= max && !/[\u0000-\u001f\u007f]/.test(value);
+  function cleanModels(list) {
+    const out = [];
+    const seen = new Set();
+    for (const model of Array.isArray(list) ? list : []) {
+      if (!model || !plain(model.id, 256) || !plain(model.name, 200) || seen.has(model.id)) continue;
+      seen.add(model.id);
+      const efforts = Array.isArray(model.efforts) ? model.efforts.filter(level => plain(level, 16)).slice(0, 16) : [];
+      out.push({ id: model.id, name: model.name, ...(efforts.length ? { efforts } : {}),
+        ...(efforts.includes(model.defaultEffort) ? { defaultEffort: model.defaultEffort } : {}) });
+      if (out.length === 200) break;
+    }
+    return out;
+  }
+  // Oldest first, so the engine's model list keeps its order as accounts are
+  // added; the oldest go first when the list is full.
+  function cleanAccounts(list) {
+    const out = [];
+    for (const entry of Array.isArray(list) ? list : []) {
+      if (!entry || !plain(entry.dir, 4096) || out.some(item => item.dir === entry.dir)) continue;
+      out.push({ dir: entry.dir, models: cleanModels(entry.models) });
+    }
+    while (out.length > ACCOUNTS_MAX || (out.length && JSON.stringify(out).length > ACCOUNTS_BYTES)) out.shift();
+    return out;
+  }
+  function loadAccounts() {
+    accountsLoad ??= fetch('/kv').then(response => response.json())
+      .then(kv => { addedAccounts = cleanAccounts(kv?.[ACCOUNTS_KEY]); }).catch(() => {});
+    return accountsLoad;
+  }
+  function saveAccounts() {
+    accountsSave = accountsSave.then(async () => {
+      const kv = await fetch('/kv').then(response => response.json()).catch(() => null);
+      if (!kv || typeof kv !== 'object' || Array.isArray(kv)) return;
+      await fetch('/kv', { method: 'PUT', body: JSON.stringify({ ...kv, [ACCOUNTS_KEY]: addedAccounts }) });
+    }).catch(() => {});
+    return accountsSave;
+  }
+  // Returns whether the remembered accounts changed.
+  function rememberAccount(params) {
+    if (!params || !plain(params.dir, 4096)) return false;
+    const at = addedAccounts.findIndex(entry => entry.dir === params.dir);
+    if (params.removed === true) {
+      if (at === -1) return false;
+      addedAccounts = addedAccounts.filter(entry => entry.dir !== params.dir);
+      return true;
+    }
+    const models = cleanModels(params.models);
+    if (at !== -1 && JSON.stringify(addedAccounts[at].models) === JSON.stringify(models)) return false;
+    addedAccounts = at === -1 ? cleanAccounts([...addedAccounts, { dir: params.dir, models }])
+      : addedAccounts.map((entry, index) => (index === at ? { dir: entry.dir, models } : entry));
+    return true;
+  }
+  // The original login's models first, then those only added accounts offer.
+  function engineModels(own) {
+    const models = Array.isArray(own) ? [...own] : [];
+    const seen = new Set(models.map(model => model.id));
+    for (const entry of addedAccounts) {
+      for (const model of entry.models) {
+        if (models.length >= 200) return models;
+        if (!seen.has(model.id)) {
+          seen.add(model.id);
+          models.push(model);
+        }
+      }
+    }
+    return models;
+  }
+  let republishTimer;
+  function republishSoon() {
+    clearTimeout(republishTimer);
+    republishTimer = setTimeout(async () => {
+      if (latest?.status.available) latest.published = await publish(latest.status).catch(() => 'error');
+    }, 300);
+  }
   async function publish(status) {
     const record = { id: 'zcode', available: status.available };
     if (status.version) record.version = status.version;
@@ -171,8 +283,9 @@
       record.reportsUsage = true;
       record.remoteWorkspace = true;
       record.guestWorkspace = true;
+      record.accounts = { methods: accountMethods(status) };
 
-      record.models = status.models;
+      record.models = engineModels(status.models);
       if (status.modes?.length) {
         record.modes = status.modes;
         if (record.modes.includes(status.defaultMode)) record.defaultMode = status.defaultMode;
@@ -189,11 +302,21 @@
     if (!inflight) {
       inflight = (async () => {
         let status;
+        await loadAccounts();
+        const sent = addedAccounts.map(entry => entry.dir);
         try {
-          const response = await cindy.node.request({ method: 'detect', params: {}, timeoutMs: 45000 });
+          const response = await cindy.node.request({ method: 'detect', params: { accountDirs: sent }, timeoutMs: 45000 });
           if (response?.ok && typeof response.result?.available === 'boolean') status = response.result;
         } catch {}
         status ??= { available: false, reason: 'check-failed' };
+        if (status.available && Array.isArray(status.accountDirs)) {
+          // Forget accounts whose folder Cindy removed (the account was removed).
+          const gone = new Set(sent.filter(dir => !status.accountDirs.includes(dir)));
+          if (gone.size) {
+            addedAccounts = addedAccounts.filter(entry => !gone.has(entry.dir));
+            void saveAccounts();
+          }
+        }
         if (!status.available) clearUsage();
         const published = await publish(status).catch(() => 'error');
         latest = { status, published };
@@ -341,11 +464,21 @@
     const { status, published } = latest;
     channel.postMessage({
       type: 'status', id: data.id, locale, published,
-      available: status.available, reason: status.reason, message: status.available ? '' : hint(status),
-      version: status.version, path: status.path, count: status.models?.length,
+      // ZCode can run while its own login has no model yet (accounts can still
+      // be added in Cindy); the hint still says how to sign in.
+      available: status.available, reason: status.reason, message: status.reason ? hint(status) : '',
+      version: status.version, path: status.path, count: status.available ? engineModels(status.models).length : undefined,
     });
   };
   cindy.onHostMessage(async message => {
+    if (message?.type === 'event' && message.name === 'node-notification' && message.method === 'account-models') {
+      await loadAccounts();
+      if (rememberAccount(message.params)) {
+        void saveAccounts();
+        republishSoon();
+      }
+      return;
+    }
     if (message?.type === 'event' && message.name === 'node-notification' && message.method === 'login-url') {
       // The CLI opens the browser itself; this address is the fallback link.
       const url = message.params?.url;
@@ -363,7 +496,8 @@
       const previous = locale;
       useLocale(message.context);
       if (locale !== previous) {
-        if (latest && !latest.status.available) latest.published = await publish(latest.status).catch(() => 'error');
+        // Hints and account method labels follow Cindy's language.
+        if (latest) latest.published = await publish(latest.status).catch(() => 'error');
         channel.postMessage({ type: 'locale-changed' });
       }
     }

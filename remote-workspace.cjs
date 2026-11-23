@@ -15,7 +15,9 @@
  *      `session/list`, and isolates `ZCODE_HOME` / `ZCODE_DATA_BASE_DIR` under
  *      `<zcodeHome>/cindy-guest-workspace/.zcode` copying only provider & credential files from
  *      `v2/` (never the sharer's session history, user MCP servers, plugins, skills or AGENTS.md),
- *      while preserving `ZCODE_GUEST_ORIGINAL_CREDENTIALS_PATH` for OS keyring decryption.
+ *      while preserving `ZCODE_GUEST_ORIGINAL_CREDENTIALS_PATH` for OS keyring decryption. With
+ *      `--cindy-account-dir`, `runtime.env.ZCODE_HOME` is that account's home (account-home.cjs),
+ *      so the isolated tree is copied from the account, never from the original login.
  *   3. Watches the ACP JSON-RPC stream: requires HTTP `cindy_exec` on session open, rewrites
  *      `mcp__cindy_exec__<Tool>` titles/kinds back to Cindy's native tool names (`Bash`, `Read`,
  *      `Write`, `Edit`, …), and terminates the child fail-closed (exit code 78) if any local tool
